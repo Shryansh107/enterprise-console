@@ -122,7 +122,7 @@ export default function Products({
         <div className="lg:col-span-12">
           
           {/* Table */}
-          <div className="border border-[#2a2d3a] bg-[#12131a] rounded-lg overflow-visible relative">
+          <div className="border border-[#2a2d3a] bg-[#12131a] rounded-lg overflow-x-auto relative">
             {loading && (
               <div className="absolute inset-0 bg-[#0b0b12]/50 backdrop-blur-sm z-[40] flex items-center justify-center rounded-lg animate-none">
                 <div className="flex flex-col items-center gap-2 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-lg shadow-2xl">
@@ -131,7 +131,7 @@ export default function Products({
                 </div>
               </div>
             )}
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse text-xs min-w-[800px]">
               <thead>
                 <tr className="bg-[#171924] text-[#9ca3af] uppercase tracking-wider border-b border-[#2a2d3a]">
                   

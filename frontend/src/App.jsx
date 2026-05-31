@@ -25,6 +25,19 @@ import HUDToast from './components/HUDToast';
 import Modal from './components/Modal';
 import { formatCurrency, formatDateTime, padOrderId } from './utils/formatters';
 
+const LOADING_MESSAGES = [
+  "CONNECTING TO REMOTE CLOUD DATABASE...",
+  "STATUS: SPINNING UP STORAGE DISKS...",
+  "DATALINK: WAKING UP DORMANT COMPUTE HANDLERS...",
+  "AUTHENTICATING SYSTEM CREDENTIALS...",
+  "RESOLVING ENVIRONMENT CONFIG...",
+  "FETCHING INTEGRITY SCHEMAS...",
+  "RETRIEVING PRODUCT SKU ENTRIES...",
+  "SYNCHRONIZING CUSTOMER ACCOUNTS MATRIX...",
+  "COMPILING COMPLETE SALES TRANSACTION BLOCS...",
+  "INITIAL HANDSHAKE READY — DEPLOYING DASHBOARD..."
+];
+
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -55,6 +68,12 @@ export default function App() {
   // Loading & Error States
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Typewriter Fullscreen Loader States
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [visibleLines, setVisibleLines] = useState([]);
+  const [currentLineIdx, setCurrentLineIdx] = useState(0);
+  const [typedText, setTypedText] = useState("");
   
   // Toast Notification State
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -341,6 +360,44 @@ export default function App() {
       loadData();
     }
   }, [location.pathname, location.search]);
+
+  // Typewriter effect timer logic
+  useEffect(() => {
+    if (!isInitialLoad || !loading) return;
+
+    if (currentLineIdx < LOADING_MESSAGES.length) {
+      const fullText = LOADING_MESSAGES[currentLineIdx];
+      let charIdx = 0;
+      setTypedText("");
+
+      const timer = setInterval(() => {
+        setTypedText((prev) => prev + fullText.charAt(charIdx));
+        charIdx++;
+        if (charIdx >= fullText.length) {
+          clearInterval(timer);
+          setTimeout(() => {
+            setVisibleLines((prev) => [...prev, fullText]);
+            setCurrentLineIdx((prev) => prev + 1);
+          }, 800);
+        }
+      }, 30);
+
+      return () => clearInterval(timer);
+    } else {
+      // Periodic wait lines if cloud service wakeup is delayed
+      const timer = setInterval(() => {
+        setVisibleLines((prev) => [...prev, "CLOUD GATEWAY DELAYED... RETRYING DATA FEED PINGS... (SERVER STILL WAKING UP)"]);
+      }, 6000);
+      return () => clearInterval(timer);
+    }
+  }, [currentLineIdx, isInitialLoad, loading]);
+
+  // Track initial load completion (wakes up when products/data exist or error occurs)
+  useEffect(() => {
+    if (isInitialLoad && !loading && (products.length > 0 || customers.length > 0 || orders.length > 0 || error)) {
+      setIsInitialLoad(false);
+    }
+  }, [loading, products, customers, orders, error]);
 
   // Load more trigger callbacks mapped to paginated offsets
   const handleLoadMoreProducts = (currentCount) => {
@@ -653,7 +710,33 @@ export default function App() {
   const orderTotalLive = orderForm.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   return (
-    <div className="min-h-screen bg-[#0b0b12] text-[#f3f4f6] flex flex-col md:flex-row relative">
+    <div className="min-h-screen bg-[#0b0b12] text-[#f3f4f6] flex flex-col lg:flex-row relative">
+      
+      {/* Fullscreen Loader Overlay */}
+      {loading && (isInitialLoad ? (
+        <div className="fullscreen-loader-overlay select-none">
+          <div className="loader"></div>
+          <div className="loader-messages-container">
+            <div className="font-display font-bold text-white text-[10px] tracking-wider mb-6">
+              SYSTEM INITIALIZATION — DATABASE HANDSHAKE
+            </div>
+            {visibleLines.map((line, idx) => (
+              <div key={idx} className="text-[#9ca3af] font-mono text-[9px] mb-1">// {line}</div>
+            ))}
+            {currentLineIdx < LOADING_MESSAGES.length && (
+              <div className="text-white font-mono text-[9px] font-semibold">
+                &gt; {typedText}
+                <span className="loader-cursor"></span>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="fullscreen-loader-overlay select-none">
+          <div className="loader"></div>
+          <div className="mt-6 font-mono text-[9px] uppercase tracking-widest text-[#9ca3af]">// Syncing Database Ledger</div>
+        </div>
+      ))}
       
       {/* Dynamic Toast System */}
       <HUDToast 
@@ -663,7 +746,7 @@ export default function App() {
       />
 
       {/* Navigation Sidebar (Desktop B2B Console) */}
-      <aside className="hidden md:flex flex-col w-72 bg-[#12131a] border-r border-[#2a2d3a] p-8 shrink-0 justify-between select-none">
+      <aside className="hidden lg:flex flex-col w-64 bg-[#12131a] border-r border-[#2a2d3a] p-8 shrink-0 justify-between select-none">
         <div>
           {/* Logo Brand - Sleek Sans-Serif Enterprise Header */}
           <div className="mb-12">
@@ -709,7 +792,7 @@ export default function App() {
       </aside>
 
       {/* Navigation Topbar (Mobile) */}
-      <header className="md:hidden flex items-center justify-between px-6 py-4 bg-[#12131a] border-b border-[#2a2d3a] w-full sticky top-0 z-50">
+      <header className="lg:hidden flex items-center justify-between px-6 py-4 bg-[#12131a] border-b border-[#2a2d3a] w-full sticky top-0 z-50">
         <h1 className="font-display font-bold text-xl tracking-tight uppercase text-white">
           ETHARA <span className="font-mono text-[8px] tracking-wider font-bold text-[var(--accent)] ml-1">IMS</span>
         </h1>
@@ -723,7 +806,7 @@ export default function App() {
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed top-[60px] left-0 w-full h-[calc(100vh-60px)] bg-[#0c0c14] z-40 flex flex-col p-8 justify-between border-b border-[var(--accent)]">
+        <div className="lg:hidden fixed top-[60px] left-0 w-full h-[calc(100vh-60px)] bg-[#0c0c14] z-40 flex flex-col p-8 justify-between border-b border-[var(--accent)]">
           <nav className="flex flex-col gap-4">
             <NavLink 
               to="/"

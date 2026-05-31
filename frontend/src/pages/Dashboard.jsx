@@ -50,7 +50,7 @@ export default function Dashboard({
       />
 
       {/* Standard B2B Elevated Cards */}
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12 select-none">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 select-none">
         
         <div className="enterprise-card enterprise-card-hover group">
           <div className="flex justify-between items-start mb-4">
