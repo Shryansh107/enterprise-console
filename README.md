@@ -57,58 +57,44 @@ A production-ready full-stack Inventory & Order Management System for managing p
 
 ---
 
-### Method A: Running with Docker (Recommended)
-This approach sets up Postgres, compiles the React assets, prepares the FastAPI server, and seeds the database automatically in one step. You can choose to run it using the pre-built Docker Hub images or build it locally from source.
+### Running Instructions 
+This approach sets up Postgres, pulls the pre-built backend image, compiles the React assets locally, and seeds the database automatically in one step.
 
 1. **Clone the repository and copy the environment template:**
    ```bash
    cp .env.example .env
    ```
 
-2. **Run Option 1: Using Pre-built Docker Hub Images (Easiest)**
-   Pull and run the pre-built backend (`shryansh/ethara-backend:latest`) and frontend (`shryansh/ethara-frontend:latest`) images directly:
+2. **Launch the application stack:**
    ```bash
-   docker compose pull
    docker compose up
    ```
 
-3. **Run Option 2: Build locally from source**
-   Build the images locally and start the containers:
-   ```bash
-   docker compose up --build
-   ```
-
-4. **Access the applications:**
+3. **Access the applications:**
    - **Frontend Interface:** [http://localhost:5173](http://localhost:5173)
    - **FastAPI Core Service:** [http://localhost:8000](http://localhost:8000)
    - **Interactive API Documentation (Swagger Docs):** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
-### 🛠️ Building & Pushing Images to Docker Hub
-If you want to rebuild the custom backend/frontend Docker images and push them to Docker Hub yourself:
+### 🛠️ Building & Pushing the Backend Image to Docker Hub
+If you want to rebuild the custom backend Docker image and push it to Docker Hub yourself:
 
 1. **Log in to Docker Hub:**
    ```bash
    docker login
    ```
 
-2. **Build and Tag the Images:**
+2. **Build and Tag the Image:**
    ```bash
    # Build the backend
    docker build -t shryansh/ethara-backend:latest ./backend
-
-   # Build the frontend
-   docker build -t shryansh/ethara-frontend:latest ./frontend
    ```
 
-3. **Push the Images:**
+3. **Push the Image:**
    ```bash
    # Push the backend
    docker push shryansh/ethara-backend:latest
-
-   # Push the frontend
-   docker push shryansh/ethara-frontend:latest
    ```
 
 

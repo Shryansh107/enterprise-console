@@ -49,7 +49,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    image: shryansh/ethara-frontend:latest
+    image: ethara-frontend:latest
     container_name: ethara-frontend
     ports:
       - "5173:5173"
