@@ -1,9 +1,11 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, status
+from sqlalchemy import cast, String
 from sqlalchemy.orm import Session, joinedload
 from app.db.session import get_db
 from app.models.order import Order
 from app.models.order_item import OrderItem
+from app.models.customer import Customer
 from app.schemas.order import OrderCreate, OrderResponse
 from app.services import order_service
 from app.core.errors import EntityNotFoundException
@@ -24,8 +26,36 @@ def create_order(order_in: OrderCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=List[OrderResponse])
-def get_orders(db: Session = Depends(get_db)):
-    return db.query(Order).options(
+def get_orders(
+    txn_id: Optional[str] = None,
+    customer_name: Optional[str] = None,
+    customer_email: Optional[str] = None,
+    min_amount: Optional[float] = None,
+    max_amount: Optional[float] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(Order).join(Customer, Order.customer_id == Customer.id, isouter=True)
+    
+    if txn_id:
+        cleaned_id = txn_id.lower().replace("#trx-", "").replace("trx-", "").strip()
+        if cleaned_id.isdigit():
+            query = query.filter(Order.id == int(cleaned_id))
+        else:
+            query = query.filter(cast(Order.id, String).ilike(f"%{cleaned_id}%"))
+            
+    if customer_name:
+        query = query.filter(Customer.full_name.ilike(f"%{customer_name}%"))
+        
+    if customer_email:
+        query = query.filter(Customer.email.ilike(f"%{customer_email}%"))
+        
+    if min_amount is not None:
+        query = query.filter(Order.total_amount >= min_amount)
+        
+    if max_amount is not None:
+        query = query.filter(Order.total_amount <= max_amount)
+
+    return query.options(
         joinedload(Order.customer),
         joinedload(Order.items).joinedload(OrderItem.product)
     ).order_by(Order.created_at.desc()).all()

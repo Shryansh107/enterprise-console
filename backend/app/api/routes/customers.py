@@ -25,6 +25,9 @@ def create_customer(customer_in: CustomerCreate, db: Session = Depends(get_db)):
 @router.get("/", response_model=List[CustomerResponse])
 def get_customers(
     search: Optional[str] = None,
+    name: Optional[str] = None,
+    email: Optional[str] = None,
+    phone: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(Customer)
@@ -33,6 +36,13 @@ def get_customers(
             (Customer.full_name.ilike(f"%{search}%")) | 
             (Customer.email.ilike(f"%{search}%"))
         )
+    if name:
+        query = query.filter(Customer.full_name.ilike(f"%{name}%"))
+    if email:
+        query = query.filter(Customer.email.ilike(f"%{email}%"))
+    if phone:
+        query = query.filter(Customer.phone_number.ilike(f"%{phone}%"))
+        
     return query.order_by(Customer.full_name).all()
 
 

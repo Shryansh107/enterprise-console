@@ -27,6 +27,12 @@ def create_product(product_in: ProductCreate, db: Session = Depends(get_db)):
 @router.get("/", response_model=List[ProductResponse])
 def get_products(
     search: Optional[str] = None,
+    sku: Optional[str] = None,
+    name: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    min_stock: Optional[int] = None,
+    max_stock: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(Product)
@@ -35,7 +41,19 @@ def get_products(
             (Product.name.ilike(f"%{search}%")) | 
             (Product.sku.ilike(f"%{search}%"))
         )
-    # Order by name
+    if sku:
+        query = query.filter(Product.sku.ilike(f"%{sku}%"))
+    if name:
+        query = query.filter(Product.name.ilike(f"%{name}%"))
+    if min_price is not None:
+        query = query.filter(Product.price >= min_price)
+    if max_price is not None:
+        query = query.filter(Product.price <= max_price)
+    if min_stock is not None:
+        query = query.filter(Product.quantity_in_stock >= min_stock)
+    if max_stock is not None:
+        query = query.filter(Product.quantity_in_stock <= max_stock)
+        
     return query.order_by(Product.name).all()
 
 

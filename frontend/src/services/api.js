@@ -21,9 +21,17 @@ async function handleResponse(response) {
 
 export const api = {
   products: {
-    list: async (search = '') => {
+    list: async (filters = {}) => {
       const url = new URL(`${API_URL}/api/products/`);
-      if (search) url.searchParams.append('search', search);
+      if (typeof filters === 'string') {
+        if (filters) url.searchParams.append('search', filters);
+      } else if (filters) {
+        Object.keys(filters).forEach(key => {
+          if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
+            url.searchParams.append(key, filters[key]);
+          }
+        });
+      }
       const res = await fetch(url.toString());
       return handleResponse(res);
     },
@@ -56,9 +64,17 @@ export const api = {
   },
   
   customers: {
-    list: async (search = '') => {
+    list: async (filters = {}) => {
       const url = new URL(`${API_URL}/api/customers/`);
-      if (search) url.searchParams.append('search', search);
+      if (typeof filters === 'string') {
+        if (filters) url.searchParams.append('search', filters);
+      } else if (filters) {
+        Object.keys(filters).forEach(key => {
+          if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
+            url.searchParams.append(key, filters[key]);
+          }
+        });
+      }
       const res = await fetch(url.toString());
       return handleResponse(res);
     },
@@ -79,8 +95,18 @@ export const api = {
   },
   
   orders: {
-    list: async () => {
-      const res = await fetch(`${API_URL}/api/orders/`);
+    list: async (filters = {}) => {
+      const url = new URL(`${API_URL}/api/orders/`);
+      if (typeof filters === 'string') {
+        if (filters) url.searchParams.append('search', filters);
+      } else if (filters) {
+        Object.keys(filters).forEach(key => {
+          if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
+            url.searchParams.append(key, filters[key]);
+          }
+        });
+      }
+      const res = await fetch(url.toString());
       return handleResponse(res);
     },
     create: async (data) => {
