@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Layers, 
-  Users, 
-  ShoppingBag, 
-  AlertTriangle, 
   Plus, 
   Trash2, 
   Eye, 
   X, 
-  TrendingUp, 
   Menu, 
   ChevronRight, 
   Edit3, 
@@ -16,21 +11,31 @@ import {
   Activity,
   Cpu,
   ShieldAlert,
-  Search,
-  CheckCircle,
-  FileText,
-  Filter
+  Users
 } from 'lucide-react';
+import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { api } from './services/api';
-import PageHeader from './components/PageHeader';
+
+import Dashboard from './pages/Dashboard';
+import Products from './pages/Products';
+import Customers from './pages/Customers';
+import Orders from './pages/Orders';
+
 import HUDToast from './components/HUDToast';
 import Modal from './components/Modal';
-import FilterPopover from './components/FilterPopover';
-import VirtualizedTableBody from './components/VirtualizedTableBody';
+import { formatCurrency, formatDateTime, padOrderId } from './utils/formatters';
 
 export default function App() {
-  // Navigation State
-  const [currentTab, setCurrentTab] = useState('dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentPath = location.pathname;
+
+  const isDashboardActive = currentPath === '/';
+  const isProductsActive = currentPath === '/products';
+  const isCustomersActive = currentPath === '/customers';
+  const isOrdersActive = currentPath === '/orders';
+
+  // Navigation & Menu State
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Core Data Lists
@@ -342,13 +347,11 @@ export default function App() {
     const selectedProduct = products.find(p => p.id === parseInt(newOrderItem.product_id));
     if (!selectedProduct) return;
 
-    // Check inventory availability (front-end check)
     if (selectedProduct.quantity_in_stock < newOrderItem.quantity) {
       showToast(`Insufficient stock: only ${selectedProduct.quantity_in_stock} items remaining in inventory.`, 'error');
       return;
     }
 
-    // Check if product already exists in item list, update quantity
     const existingIndex = orderForm.items.findIndex(item => item.product_id === selectedProduct.id);
     if (existingIndex > -1) {
       const updatedItems = [...orderForm.items];
@@ -374,7 +377,6 @@ export default function App() {
       });
     }
 
-    // Reset item input
     setNewOrderItem({ product_id: '', quantity: 1 });
   };
 
@@ -431,14 +433,17 @@ export default function App() {
     }
   };
 
+  // Named function for delete confirmation action (satisfying rule 9 - definition > 5 lines)
+  const handleConfirmDelete = () => {
+    const { type, id } = deleteConfirm;
+    if (type === 'product') handleProductDelete(id);
+    if (type === 'customer') handleCustomerDelete(id);
+    if (type === 'order') handleOrderCancel(id);
+  };
+
   // Helper Calculations
   const lowStockProductsCount = products.filter(p => p.quantity_in_stock <= LOW_STOCK_THRESHOLD).length;
   const orderTotalLive = orderForm.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-  const navigateTo = (tab) => {
-    setCurrentTab(tab);
-    setMobileMenuOpen(false);
-  };
 
   return (
     <div className="min-h-screen bg-[#0b0b12] text-[#f3f4f6] flex flex-col md:flex-row relative">
@@ -462,34 +467,35 @@ export default function App() {
           </div>
 
           <nav className="flex flex-col gap-2">
-            <button 
-              onClick={() => navigateTo('dashboard')}
-              className={`w-full text-left px-4 py-3 font-mono text-[10px] tracking-wider uppercase flex justify-between items-center transition-all duration-150 border-l-2 rounded-md ${currentTab === 'dashboard' ? 'bg-[#171924] border-[var(--accent)] text-white font-semibold' : 'border-transparent text-[#9ca3af] hover:text-white hover:bg-[#171924]/50'}`}
+            <NavLink 
+              to="/"
+              end
+              className={({ isActive }) => `w-full text-left px-4 py-3 font-mono text-[10px] tracking-wider uppercase flex justify-between items-center transition-all duration-150 border-l-2 rounded-md ${isActive ? 'bg-[#171924] border-[var(--accent)] text-white font-semibold' : 'border-transparent text-[#9ca3af] hover:text-white hover:bg-[#171924]/50'}`}
             >
               <span>Dashboard Overview</span>
-              <Terminal size={12} className={currentTab === 'dashboard' ? 'text-[var(--accent)]' : 'opacity-40'} />
-            </button>
-            <button 
-              onClick={() => navigateTo('products')}
-              className={`w-full text-left px-4 py-3 font-mono text-[10px] tracking-wider uppercase flex justify-between items-center transition-all duration-150 border-l-2 rounded-md ${currentTab === 'products' ? 'bg-[#171924] border-[var(--accent)] text-white font-semibold' : 'border-transparent text-[#9ca3af] hover:text-white hover:bg-[#171924]/50'}`}
+              <Terminal size={12} className={isDashboardActive ? 'text-[var(--accent)]' : 'opacity-40'} />
+            </NavLink>
+            <NavLink 
+              to="/products"
+              className={({ isActive }) => `w-full text-left px-4 py-3 font-mono text-[10px] tracking-wider uppercase flex justify-between items-center transition-all duration-150 border-l-2 rounded-md ${isActive ? 'bg-[#171924] border-[var(--accent)] text-white font-semibold' : 'border-transparent text-[#9ca3af] hover:text-white hover:bg-[#171924]/50'}`}
             >
               <span>Inventory SKUs</span>
-              <Cpu size={12} className={currentTab === 'products' ? 'text-[var(--accent)]' : 'opacity-40'} />
-            </button>
-            <button 
-              onClick={() => navigateTo('customers')}
-              className={`w-full text-left px-4 py-3 font-mono text-[10px] tracking-wider uppercase flex justify-between items-center transition-all duration-150 border-l-2 rounded-md ${currentTab === 'customers' ? 'bg-[#171924] border-[var(--accent)] text-white font-semibold' : 'border-transparent text-[#9ca3af] hover:text-white hover:bg-[#171924]/50'}`}
+              <Cpu size={12} className={isProductsActive ? 'text-[var(--accent)]' : 'opacity-40'} />
+            </NavLink>
+            <NavLink 
+              to="/customers"
+              className={({ isActive }) => `w-full text-left px-4 py-3 font-mono text-[10px] tracking-wider uppercase flex justify-between items-center transition-all duration-150 border-l-2 rounded-md ${isActive ? 'bg-[#171924] border-[var(--accent)] text-white font-semibold' : 'border-transparent text-[#9ca3af] hover:text-white hover:bg-[#171924]/50'}`}
             >
               <span>Customer Nodes</span>
-              <Users size={12} className={currentTab === 'customers' ? 'text-[var(--accent)]' : 'opacity-40'} />
-            </button>
-            <button 
-              onClick={() => navigateTo('orders')}
-              className={`w-full text-left px-4 py-3 font-mono text-[10px] tracking-wider uppercase flex justify-between items-center transition-all duration-150 border-l-2 rounded-md ${currentTab === 'orders' ? 'bg-[#171924] border-[var(--accent)] text-white font-semibold' : 'border-transparent text-[#9ca3af] hover:text-white hover:bg-[#171924]/50'}`}
+              <Users size={12} className={isCustomersActive ? 'text-[var(--accent)]' : 'opacity-40'} />
+            </NavLink>
+            <NavLink 
+              to="/orders"
+              className={({ isActive }) => `w-full text-left px-4 py-3 font-mono text-[10px] tracking-wider uppercase flex justify-between items-center transition-all duration-150 border-l-2 rounded-md ${isActive ? 'bg-[#171924] border-[var(--accent)] text-white font-semibold' : 'border-transparent text-[#9ca3af] hover:text-white hover:bg-[#171924]/50'}`}
             >
               <span>Transaction Blocs</span>
-              <Activity size={12} className={currentTab === 'orders' ? 'text-[var(--accent)]' : 'opacity-40'} />
-            </button>
+              <Activity size={12} className={isOrdersActive ? 'text-[var(--accent)]' : 'opacity-40'} />
+            </NavLink>
           </nav>
         </div>
 
@@ -512,34 +518,39 @@ export default function App() {
       {mobileMenuOpen && (
         <div className="md:hidden fixed top-[60px] left-0 w-full h-[calc(100vh-60px)] bg-[#0c0c14] z-40 flex flex-col p-8 justify-between border-b border-[var(--accent)]">
           <nav className="flex flex-col gap-4">
-            <button 
-              onClick={() => navigateTo('dashboard')}
-              className="w-full text-left px-4 py-4 font-mono text-xs tracking-wider uppercase border border-[#2a2d3a] text-[#9ca3af] hover:text-[var(--accent)] hover:border-[var(--accent)] flex justify-between items-center rounded-md"
+            <NavLink 
+              to="/"
+              end
+              onClick={() => setMobileMenuOpen(false)}
+              className={({ isActive }) => `w-full text-left px-4 py-4 font-mono text-xs tracking-wider uppercase border flex justify-between items-center rounded-md transition-all ${isActive ? 'border-[var(--accent)] text-white bg-[#171924]/50' : 'border-[#2a2d3a] text-[#9ca3af] hover:text-[var(--accent)] hover:border-[var(--accent)]'}`}
             >
               <span>Dashboard Overview</span>
               <ChevronRight size={14} />
-            </button>
-            <button 
-              onClick={() => navigateTo('products')}
-              className="w-full text-left px-4 py-4 font-mono text-xs tracking-wider uppercase border border-[#2a2d3a] text-[#9ca3af] hover:text-[var(--accent)] hover:border-[var(--accent)] flex justify-between items-center rounded-md"
+            </NavLink>
+            <NavLink 
+              to="/products"
+              onClick={() => setMobileMenuOpen(false)}
+              className={({ isActive }) => `w-full text-left px-4 py-4 font-mono text-xs tracking-wider uppercase border flex justify-between items-center rounded-md transition-all ${isActive ? 'border-[var(--accent)] text-white bg-[#171924]/50' : 'border-[#2a2d3a] text-[#9ca3af] hover:text-[var(--accent)] hover:border-[var(--accent)]'}`}
             >
               <span>Inventory Catalog</span>
               <ChevronRight size={14} />
-            </button>
-            <button 
-              onClick={() => navigateTo('customers')}
-              className="w-full text-left px-4 py-4 font-mono text-xs tracking-wider uppercase border border-[#2a2d3a] text-[#9ca3af] hover:text-[var(--accent)] hover:border-[var(--accent)] flex justify-between items-center rounded-md"
+            </NavLink>
+            <NavLink 
+              to="/customers"
+              onClick={() => setMobileMenuOpen(false)}
+              className={({ isActive }) => `w-full text-left px-4 py-4 font-mono text-xs tracking-wider uppercase border flex justify-between items-center rounded-md transition-all ${isActive ? 'border-[var(--accent)] text-white bg-[#171924]/50' : 'border-[#2a2d3a] text-[#9ca3af] hover:text-[var(--accent)] hover:border-[var(--accent)]'}`}
             >
               <span>Customer Nodes</span>
               <ChevronRight size={14} />
-            </button>
-            <button 
-              onClick={() => navigateTo('orders')}
-              className="w-full text-left px-4 py-4 font-mono text-xs tracking-wider uppercase border border-[#2a2d3a] text-[#9ca3af] hover:text-[var(--accent)] hover:border-[var(--accent)] flex justify-between items-center rounded-md"
+            </NavLink>
+            <NavLink 
+              to="/orders"
+              onClick={() => setMobileMenuOpen(false)}
+              className={({ isActive }) => `w-full text-left px-4 py-4 font-mono text-xs tracking-wider uppercase border flex justify-between items-center rounded-md transition-all ${isActive ? 'border-[var(--accent)] text-white bg-[#171924]/50' : 'border-[#2a2d3a] text-[#9ca3af] hover:text-[var(--accent)] hover:border-[var(--accent)]'}`}
             >
               <span>Transaction Blocs</span>
               <ChevronRight size={14} />
-            </button>
+            </NavLink>
           </nav>
 
           <div className="border-t border-[#2a2d3a] pt-4">
@@ -571,986 +582,86 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= TAB 1: DASHBOARD ================= */}
-        {currentTab === 'dashboard' && (
-          <div className="editorial-container">
-            {/* Elegant HUD Sub-Header */}
-            <PageHeader 
-              tag="// Operational Control Center" 
-              title="System Overview" 
-              subTitle="Database feeds loaded. Operations system report: nominal." 
-            />
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              <Dashboard 
+                products={products}
+                customers={customers}
+                orders={orders}
+                lowStockProductsCount={lowStockProductsCount}
+                onNavigateTo={navigate}
+                setShowOrderModal={setShowOrderModal}
+                setShowProductModal={setShowProductModal}
+                setShowCustomerModal={setShowCustomerModal}
+              />
+            } 
+          />
+          <Route 
+            path="/products" 
+            element={
+              <Products 
+                products={products}
+                loading={loading}
+                appliedFilters={appliedFilters}
+                stagedFilters={stagedFilters}
+                setStagedFilters={setStagedFilters}
+                activeFilterDropdown={activeFilterDropdown}
+                setActiveFilterDropdown={setActiveFilterDropdown}
+                handleApplyFilter={handleApplyFilter}
+                handleClearFilter={handleClearFilter}
+                handleClearAllFilters={handleClearAllFilters}
+                setShowProductModal={setShowProductModal}
+                setEditProduct={setEditProduct}
+                setDeleteConfirm={setDeleteConfirm}
+                LOW_STOCK_THRESHOLD={LOW_STOCK_THRESHOLD}
+              />
+            } 
+          />
+          <Route 
+            path="/customers" 
+            element={
+              <Customers 
+                customers={customers}
+                loading={loading}
+                appliedFilters={appliedFilters}
+                stagedFilters={stagedFilters}
+                setStagedFilters={setStagedFilters}
+                activeFilterDropdown={activeFilterDropdown}
+                setActiveFilterDropdown={setActiveFilterDropdown}
+                handleApplyFilter={handleApplyFilter}
+                handleClearFilter={handleClearFilter}
+                handleClearAllFilters={handleClearAllFilters}
+                setShowCustomerModal={setShowCustomerModal}
+                setDeleteConfirm={setDeleteConfirm}
+              />
+            } 
+          />
+          <Route 
+            path="/orders" 
+            element={
+              <Orders 
+                orders={orders}
+                loading={loading}
+                appliedFilters={appliedFilters}
+                stagedFilters={stagedFilters}
+                setStagedFilters={setStagedFilters}
+                activeFilterDropdown={activeFilterDropdown}
+                setActiveFilterDropdown={setActiveFilterDropdown}
+                handleApplyFilter={handleApplyFilter}
+                handleClearFilter={handleClearFilter}
+                handleClearAllFilters={handleClearAllFilters}
+                setShowOrderModal={setShowOrderModal}
+                setSelectedOrder={setSelectedOrder}
+                setDeleteConfirm={setDeleteConfirm}
+              />
+            } 
+          />
+        </Routes>
 
-            {/* Standard B2B Elevated Cards */}
-            <section className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12 select-none">
-              
-              <div className="enterprise-card enterprise-card-hover group">
-                <div className="flex justify-between items-start mb-4">
-                  <span className="font-mono text-[9px] tracking-widest uppercase text-[#9ca3af]">[01] SKU Catalog</span>
-                  <Layers size={16} className="text-[var(--accent)]" />
-                </div>
-                <div className="font-display font-bold text-4xl leading-none text-white">{products.length}</div>
-                <div className="font-mono text-[8px] tracking-wider uppercase mt-4 text-[#555770]">Database Datasets</div>
-              </div>
-
-              <div className="enterprise-card enterprise-card-hover group">
-                <div className="flex justify-between items-start mb-4">
-                  <span className="font-mono text-[9px] tracking-widest uppercase text-[#9ca3af]">[02] Customer Nodes</span>
-                  <Users size={16} className="text-[var(--accent)]" />
-                </div>
-                <div className="font-display font-bold text-4xl leading-none text-white">{customers.length}</div>
-                <div className="font-mono text-[8px] tracking-wider uppercase mt-4 text-[#555770]">Active Profiles</div>
-              </div>
-
-              <div className="enterprise-card enterprise-card-hover group">
-                <div className="flex justify-between items-start mb-4">
-                  <span className="font-mono text-[9px] tracking-widest uppercase text-[#9ca3af]">[03] Sales Matrix</span>
-                  <ShoppingBag size={16} className="text-[var(--accent)]" />
-                </div>
-                <div className="font-display font-bold text-4xl leading-none text-white">{orders.length}</div>
-                <div className="font-mono text-[8px] tracking-wider uppercase mt-4 text-[#555770]">Completed Logs</div>
-              </div>
-
-              <div className="enterprise-card border-[#3a1b2e] bg-[#120d18] group">
-                <div className="flex justify-between items-start mb-4">
-                  <span className="font-mono text-[9px] tracking-widest uppercase text-[#9ca3af]">[04] Stock Warnings</span>
-                  <AlertTriangle size={16} className="text-[var(--warning)]" />
-                </div>
-                <div className="font-display font-bold text-4xl leading-none text-white">{lowStockProductsCount}</div>
-                <div className="font-mono text-[8px] tracking-wider uppercase mt-4 text-[#555770]">SKUs Under Limit</div>
-              </div>
-
-            </section>
-
-            {/* Layout strategy Grid trace section */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              
-              {/* Clean corporate metric velocity chart */}
-              <div className="lg:col-span-8 enterprise-card relative overflow-hidden">
-                <h3 className="font-display font-semibold text-base uppercase mb-6 tracking-wider flex items-center justify-between text-white">
-                  <span>Inventory Distribution Matrix</span>
-                  <TrendingUp size={16} className="text-[var(--accent)]" />
-                </h3>
-                
-                {/* Clean histogram */}
-                <div className="h-64 flex items-end justify-between gap-4 border-b border-[#2a2d3a] pt-8 px-4">
-                  {products.slice(0, 8).map((prod, i) => {
-                    const maxQty = Math.max(...products.map(p => p.quantity_in_stock), 1);
-                    const pct = Math.max((prod.quantity_in_stock / maxQty) * 100, 4);
-                    return (
-                      <div key={prod.id} className="flex flex-col items-center flex-1 group">
-                        <span className="font-mono text-[9px] text-[var(--accent)] opacity-0 group-hover:opacity-100 mb-1 transition-opacity duration-150 select-none">
-                          {prod.quantity_in_stock}
-                        </span>
-                        {/* Clean purple block bar */}
-                        <div 
-                          className="w-full bg-[#3b1d4a] group-hover:bg-[var(--accent)] cursor-pointer rounded-t"
-                          style={{ height: `${pct * 1.5}px`, transition: 'all 200ms ease' }}
-                        ></div>
-                        <span className="font-mono text-[8px] tracking-wider uppercase truncate w-full text-center mt-2 text-[#9ca3af] group-hover:text-white">
-                          {prod.sku}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="flex justify-between items-center mt-4">
-                  <p className="font-mono text-[8px] text-[#555770] uppercase">
-                    Histogram showing inventory quantities per product SKU code.
-                  </p>
-                  <button onClick={() => navigateTo('products')} className="btn-ghost">
-                    View Catalog  <ChevronRight size={12} />
-                  </button>
-                </div>
-              </div>
-
-              {/* B2B actions panel */}
-              <div className="lg:col-span-4 enterprise-card flex flex-col justify-between">
-                <div>
-                  <h3 className="font-display font-semibold text-base uppercase mb-6 tracking-wider text-white">Console Operations</h3>
-                  <p className="font-body text-xs text-[#9ca3af] mb-6">
-                    Trigger database registrations and order transactional runs:
-                  </p>
-
-                  <div className="flex flex-col gap-3">
-                    <button 
-                      onClick={() => { navigateTo('orders'); setShowOrderModal(true); }}
-                      className="btn-primary w-full justify-between"
-                    >
-                      <span>New Order Transaction</span>
-                      <Plus size={14} />
-                    </button>
-                    
-                    <button 
-                      onClick={() => { navigateTo('products'); setShowProductModal(true); }}
-                      className="btn-secondary w-full justify-between"
-                    >
-                      <span>Add Product SKU</span>
-                      <Plus size={14} />
-                    </button>
- 
-                    <button 
-                      onClick={() => { navigateTo('customers'); setShowCustomerModal(true); }}
-                      className="btn-ghost w-full justify-between hover:text-white"
-                    >
-                      <span>Register Client Profile</span>
-                      <Plus size={14} />
-                    </button>
-                  </div>
-                </div>
- 
-                <div className="mt-8 pt-6 border-t border-[#2a2d3a]">
-                  <span className="font-mono text-[9px] uppercase text-[#555770] block mb-1">Operational State</span>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-[var(--success)] rounded-full select-none"></span>
-                    <span className="font-mono text-[9px] uppercase tracking-wider font-bold text-[var(--success)]">Nominal Datalink</span>
-                  </div>
-                </div>
-              </div>
- 
-            </div>
- 
-          </div>
-        )}
- 
-        {/* ================= TAB 2: PRODUCTS ================= */}
-        {currentTab === 'products' && (
-          <div className="editorial-container">
-            {/* Header */}
-            <PageHeader tag="[Catalog Console]" title="Product Inventory" />
- 
-            {/* CTA bar */}
-            <div className="flex justify-between items-center mb-6 pl-6 pr-2">
-              <div className="text-xs font-mono text-[#9ca3af] flex items-center gap-2">
-                <span>Showing {products.length} product SKUs.</span>
-                {Object.keys(appliedFilters.products).length > 0 && (
-                  <button 
-                    onClick={() => handleClearAllFilters('products')}
-                    className="px-2 py-0.5 border border-[#ef4444]/30 hover:border-[#ef4444] text-[#ef4444] bg-[#ef4444]/10 rounded text-[9px] font-mono uppercase tracking-wider transition-all cursor-pointer hover:bg-[#ef4444]/20"
-                  >
-                    Clear All Filters ×
-                  </button>
-                )}
-              </div>
-              <button 
-                onClick={() => setShowProductModal(true)} 
-                className="btn-primary font-mono text-xs uppercase tracking-wider"
-              >
-                <Plus size={14} /> Inject SKU Catalog
-              </button>
-            </div>
- 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              
-              {/* Product catalog listing - Stretched Full Width */}
-              <div className="lg:col-span-12">
-                
-                {/* Table */}
-                <div className="border border-[#2a2d3a] bg-[#12131a] rounded-lg overflow-visible relative">
-                  {loading && (
-                    <div className="absolute inset-0 bg-[#0b0b12]/50 backdrop-blur-sm z-[40] flex items-center justify-center rounded-lg animate-none">
-                      <div className="flex flex-col items-center gap-2 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-lg shadow-2xl">
-                        <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
-                        <span className="font-mono text-[9px] uppercase tracking-widest text-[#9ca3af]">// Syncing Inventory</span>
-                      </div>
-                    </div>
-                  )}
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-[#171924] text-[#9ca3af] uppercase tracking-wider border-b border-[#2a2d3a]">
-                        
-                        {/* SKU Column Header with Filter Popover */}
-                        <th className="py-4 px-6 font-semibold font-mono relative select-none">
-                          <div className="flex items-center gap-2">
-                            <span>SKU</span>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveFilterDropdown({
-                                  table: 'products',
-                                  column: activeFilterDropdown.column === 'sku' ? '' : 'sku'
-                                });
-                              }}
-                              className={`hover:text-white transition-colors p-1 ${appliedFilters.products.sku ? 'text-[var(--accent)] font-bold' : 'text-[#555770]'}`}
-                              title="Filter by SKU"
-                            >
-                              <Filter size={12} />
-                            </button>
-                          </div>
-                          
-                          {activeFilterDropdown.table === 'products' && activeFilterDropdown.column === 'sku' && (
-                            <div className="absolute top-12 left-6 z-50 w-64 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-md shadow-2xl normal-case font-normal text-xs text-[#f3f4f6]">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); setActiveFilterDropdown({ table: '', column: '' }); }}
-                                className="absolute top-3 right-3 text-[#9ca3af] hover:text-white"
-                              >
-                                <X size={12} />
-                              </button>
-                              <div className="mb-3">
-                                <label className="form-label mb-1">Filter by SKU</label>
-                                <input 
-                                  type="text" 
-                                  placeholder="e.g. LIGHT-003"
-                                  className="input-field uppercase font-mono"
-                                  value={stagedFilters.sku || ''}
-                                  onChange={(e) => setStagedFilters({ ...stagedFilters, sku: e.target.value })}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleApplyFilter('products', 'sku', { sku: stagedFilters.sku });
-                                  }}
-                                />
-                              </div>
-                              <div className="flex gap-2 justify-end mt-4">
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleClearFilter('products', 'sku', ['sku']); }}
-                                  className="btn-ghost py-1 px-2.5 text-[10px]"
-                                >
-                                  Clear
-                                </button>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleApplyFilter('products', 'sku', { sku: stagedFilters.sku }); }}
-                                  className="btn-primary py-1 px-3 text-[10px]"
-                                >
-                                  Apply
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </th>
- 
-                        {/* LABEL Column Header with Filter Popover */}
-                        <th className="py-4 px-6 font-semibold relative select-none">
-                          <div className="flex items-center gap-2">
-                            <span>LABEL</span>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveFilterDropdown({
-                                  table: 'products',
-                                  column: activeFilterDropdown.column === 'name' ? '' : 'name'
-                                });
-                              }}
-                              className={`hover:text-white transition-colors p-1 ${ (appliedFilters.products.name || appliedFilters.products.max_stock !== undefined || appliedFilters.products.min_stock !== undefined) ? 'text-[var(--accent)] font-bold' : 'text-[#555770]'}`}
-                              title="Filter by Name & Status"
-                            >
-                              <Filter size={12} />
-                            </button>
-                          </div>
-                          
-                          {activeFilterDropdown.table === 'products' && activeFilterDropdown.column === 'name' && (
-                            <div className="absolute top-12 left-6 z-50 w-64 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-md shadow-2xl normal-case font-normal text-xs text-[#f3f4f6]">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); setActiveFilterDropdown({ table: '', column: '' }); }}
-                                className="absolute top-3 right-3 text-[#9ca3af] hover:text-white"
-                              >
-                                <X size={12} />
-                              </button>
-                              <div className="mb-4">
-                                <label className="form-label mb-1">Filter by Product Name</label>
-                                <input 
-                                  type="text" 
-                                  placeholder="e.g. StarkDesk"
-                                  className="input-field"
-                                  value={stagedFilters.name || ''}
-                                  onChange={(e) => setStagedFilters({ ...stagedFilters, name: e.target.value })}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      const patch = { name: stagedFilters.name };
-                                      if (stagedFilters.stock_status === 'low_stock') {
-                                        patch.max_stock = 5;
-                                        patch.min_stock = null;
-                                      } else if (stagedFilters.stock_status === 'depleted') {
-                                        patch.max_stock = 0;
-                                        patch.min_stock = null;
-                                      } else {
-                                        patch.max_stock = null;
-                                        patch.min_stock = null;
-                                      }
-                                      handleApplyFilter('products', 'name', patch);
-                                    }
-                                  }}
-                                />
-                              </div>
-
-                              <div className="mb-3">
-                                <label className="form-label mb-1">Stock Status</label>
-                                <select 
-                                  className="input-field bg-[#12131a] text-white focus:outline-none py-1.5"
-                                  value={stagedFilters.stock_status || ''}
-                                  onChange={(e) => setStagedFilters({ ...stagedFilters, stock_status: e.target.value })}
-                                >
-                                  <option value="" className="bg-[#12131a]">ALL STOCK LEVELS</option>
-                                  <option value="low_stock" className="bg-[#12131a]">LOW STOCK {"(<= 5)"}</option>
-                                  <option value="depleted" className="bg-[#12131a]">DEPLETED (0)</option>
-                                </select>
-                              </div>
-
-                              <div className="flex gap-2 justify-end mt-4">
-                                <button 
-                                  onClick={(e) => { 
-                                    e.stopPropagation(); 
-                                    setStagedFilters({ ...stagedFilters, stock_status: '', name: '' });
-                                    handleClearFilter('products', 'name', ['name', 'min_stock', 'max_stock']); 
-                                  }}
-                                  className="btn-ghost py-1 px-2.5 text-[10px]"
-                                >
-                                  Clear
-                                </button>
-                                <button 
-                                  onClick={(e) => { 
-                                    e.stopPropagation(); 
-                                    const patch = { name: stagedFilters.name };
-                                    if (stagedFilters.stock_status === 'low_stock') {
-                                      patch.max_stock = 5;
-                                      patch.min_stock = null;
-                                    } else if (stagedFilters.stock_status === 'depleted') {
-                                      patch.max_stock = 0;
-                                      patch.min_stock = null;
-                                    } else {
-                                      patch.max_stock = null;
-                                      patch.min_stock = null;
-                                    }
-                                    handleApplyFilter('products', 'name', patch); 
-                                  }}
-                                  className="btn-primary py-1 px-3 text-[10px]"
-                                >
-                                  Apply
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </th>
- 
-                        {/* UNIT PRICE Column Header with Filter Popover */}
-                        <th className="py-4 px-6 font-semibold text-right relative select-none">
-                          <div className="flex items-center gap-2 justify-end">
-                            <span>UNIT PRICE</span>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveFilterDropdown({
-                                  table: 'products',
-                                  column: activeFilterDropdown.column === 'price' ? '' : 'price'
-                                });
-                              }}
-                              className={`hover:text-white transition-colors p-1 ${ (appliedFilters.products.min_price || appliedFilters.products.max_price) ? 'text-[var(--accent)] font-bold' : 'text-[#555770]'}`}
-                              title="Filter by Price"
-                            >
-                              <Filter size={12} />
-                            </button>
-                          </div>
-                          
-                          {activeFilterDropdown.table === 'products' && activeFilterDropdown.column === 'price' && (
-                            <div className="absolute top-12 right-6 z-50 w-72 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-md shadow-2xl normal-case font-normal text-xs text-[#f3f4f6] text-left">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); setActiveFilterDropdown({ table: '', column: '' }); }}
-                                className="absolute top-3 right-3 text-[#9ca3af] hover:text-white"
-                              >
-                                <X size={12} />
-                              </button>
-                              
-                              <div className="grid grid-cols-2 gap-2 mb-3">
-                                <div>
-                                  <label className="form-label mb-1">Min Price ($)</label>
-                                  <input 
-                                    type="number" 
-                                    step="0.01"
-                                    placeholder="0.00"
-                                    className="input-field font-mono text-xs"
-                                    value={stagedFilters.min_price || ''}
-                                    onChange={(e) => setStagedFilters({ ...stagedFilters, min_price: e.target.value })}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="form-label mb-1">Max Price ($)</label>
-                                  <input 
-                                    type="number" 
-                                    step="0.01"
-                                    placeholder="1000.00"
-                                    className="input-field font-mono text-xs"
-                                    value={stagedFilters.max_price || ''}
-                                    onChange={(e) => setStagedFilters({ ...stagedFilters, max_price: e.target.value })}
-                                  />
-                                </div>
-                              </div>
-                              
-                              <div className="flex gap-2 justify-end mt-4">
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleClearFilter('products', 'price', ['min_price', 'max_price']); }}
-                                  className="btn-ghost py-1 px-2.5 text-[10px]"
-                                >
-                                  Clear
-                                </button>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleApplyFilter('products', 'price', { min_price: stagedFilters.min_price, max_price: stagedFilters.max_price }); }}
-                                  className="btn-primary py-1 px-3 text-[10px]"
-                                >
-                                  Apply
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </th>
- 
-                        {/* QUANTITY Column Header */}
-                        <th className="py-4 px-6 font-semibold text-right select-none">
-                          QUANTITY
-                        </th>
-                        <th className="py-4 px-6 font-semibold text-center select-none">COMMAND</th>
-                      </tr>
-                    </thead>                    <VirtualizedTableBody
-                      items={products}
-                      rowHeight={64}
-                      colSpan={5}
-                      emptyPlaceholder={
-                        <tr>
-                          <td colSpan="5" className="py-8 text-center text-[#9ca3af] uppercase tracking-widest font-mono">
-                            No records matching query filters.
-                          </td>
-                        </tr>
-                      }
-                      renderRow={(p) => {
-                        const isLowStock = p.quantity_in_stock <= LOW_STOCK_THRESHOLD && p.quantity_in_stock > 0;
-                        const isOutOfStock = p.quantity_in_stock === 0;
-
-                        return (
-                          <tr key={p.id} className="hover:bg-[#171924]/30 transition-colors duration-150">
-                            <td className="py-4 px-6 font-bold font-mono text-[var(--accent)]">{p.sku}</td>
-                            <td className="py-4 px-6">
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold text-white">{p.name}</span>
-                                {isLowStock && (
-                                  <span 
-                                    className="px-1 py-0.5 border border-[#f59e0b]/30 bg-[#f59e0b]/10 text-[#f59e0b] rounded text-[7.5px] font-mono uppercase tracking-wider font-semibold leading-none align-middle"
-                                    style={{ margin: 0, padding: '1px 3px' }}
-                                  >
-                                    Low Stock
-                                  </span>
-                                )}
-                                {isOutOfStock && (
-                                  <span 
-                                    className="px-1 py-0.5 border border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444] rounded text-[7.5px] font-mono uppercase tracking-wider font-semibold leading-none align-middle"
-                                    style={{ margin: 0, padding: '1px 3px' }}
-                                  >
-                                    Depleted
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-[8px] text-[#9ca3af] block font-mono mt-1">
-                                LAST PATCHED: {new Date(p.updated_at).toLocaleString()}
-                              </span>
-                            </td>
-                            <td className="py-4 px-6 text-right font-semibold font-mono text-white">${p.price.toFixed(2)}</td>
-                            <td className="py-4 px-6 text-right">
-                              <div className="font-mono font-semibold text-white">
-                                {p.quantity_in_stock}
-                              </div>
-                            </td>
-                            <td className="py-4 px-6">
-                              <div className="flex gap-2 justify-center">
-                                <button 
-                                  onClick={() => setEditProduct(p)} 
-                                  className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-white hover:text-white rounded transition-all"
-                                  title="Edit Product"
-                                >
-                                  <Edit3 size={12} />
-                                </button>
-                                <button 
-                                  onClick={() => setDeleteConfirm({ show: true, type: 'product', id: p.id })} 
-                                  className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-[#ef4444] hover:text-[#ef4444] rounded transition-all"
-                                  title="Delete Product"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      }}
-                    />
-                  </table>
-                </div>
- 
-              </div>
- 
-            </div>
- 
-          </div>
-        )}
- 
-        {/* ================= TAB 3: CUSTOMERS ================= */}
-        {currentTab === 'customers' && (
-          <div className="editorial-container">
-            {/* Header */}
-            <PageHeader tag="[Client Module]" title="Client Database" />
- 
-            {/* CTA bar */}
-            <div className="flex justify-between items-center mb-6 pl-6 pr-2">
-              <div className="text-xs font-mono text-[#9ca3af] flex items-center gap-2">
-                <span>Showing {customers.length} registered client profiles.</span>
-                {Object.keys(appliedFilters.customers).length > 0 && (
-                  <button 
-                    onClick={() => handleClearAllFilters('customers')}
-                    className="px-2 py-0.5 border border-[#ef4444]/30 hover:border-[#ef4444] text-[#ef4444] bg-[#ef4444]/10 rounded text-[9px] font-mono uppercase tracking-wider transition-all cursor-pointer hover:bg-[#ef4444]/20"
-                  >
-                    Clear All Filters ×
-                  </button>
-                )}
-              </div>
-              <button 
-                onClick={() => setShowCustomerModal(true)} 
-                className="btn-primary font-mono text-xs uppercase tracking-wider"
-              >
-                <Plus size={14} /> Register Client Node
-              </button>
-            </div>
- 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              
-              {/* Customer table - Stretched Full Width */}
-              <div className="lg:col-span-12">
-                
-                {/* Table */}
-                <div className="border border-[#2a2d3a] bg-[#12131a] rounded-lg overflow-visible relative">
-                  {loading && (
-                    <div className="absolute inset-0 bg-[#0b0b12]/50 backdrop-blur-sm z-[40] flex items-center justify-center rounded-lg animate-none">
-                      <div className="flex flex-col items-center gap-2 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-lg shadow-2xl">
-                        <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
-                        <span className="font-mono text-[9px] uppercase tracking-widest text-[#9ca3af]">// Syncing Customer Nodes</span>
-                      </div>
-                    </div>
-                  )}
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-[#171924] text-[#9ca3af] uppercase tracking-wider border-b border-[#2a2d3a]">
-                        
-                        {/* Name Column Header with Filter Popover */}
-                        <th className="py-4 px-6 font-semibold relative select-none">
-                          <FilterPopover
-                            isOpen={activeFilterDropdown.table === 'customers' && activeFilterDropdown.column === 'name'}
-                            onToggle={() => setActiveFilterDropdown({
-                              table: 'customers',
-                              column: activeFilterDropdown.column === 'name' ? '' : 'name'
-                            })}
-                            onClose={() => setActiveFilterDropdown({ table: '', column: '' })}
-                            onClear={() => handleClearFilter('customers', 'name', ['name'])}
-                            onApply={() => handleApplyFilter('customers', 'name', { name: stagedFilters.name })}
-                            isActive={!!appliedFilters.customers.name}
-                            columnTitle="CLIENT NAME"
-                            filterLabel="Filter by Client Name"
-                            title="Filter by Name"
-                          >
-                            <input 
-                              type="text" 
-                              placeholder="e.g. Charlotte Perriand"
-                              className="input-field"
-                              value={stagedFilters.name || ''}
-                              onChange={(e) => setStagedFilters({ ...stagedFilters, name: e.target.value })}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleApplyFilter('customers', 'name', { name: stagedFilters.name });
-                              }}
-                            />
-                          </FilterPopover>
-                        </th>
-
-                        {/* Email Column Header with Filter Popover */}
-                        <th className="py-4 px-6 font-semibold relative select-none">
-                          <FilterPopover
-                            isOpen={activeFilterDropdown.table === 'customers' && activeFilterDropdown.column === 'email'}
-                            onToggle={() => setActiveFilterDropdown({
-                              table: 'customers',
-                              column: activeFilterDropdown.column === 'email' ? '' : 'email'
-                            })}
-                            onClose={() => setActiveFilterDropdown({ table: '', column: '' })}
-                            onClear={() => handleClearFilter('customers', 'email', ['email'])}
-                            onApply={() => handleApplyFilter('customers', 'email', { email: stagedFilters.email })}
-                            isActive={!!appliedFilters.customers.email}
-                            columnTitle="COMMS_EMAIL"
-                            filterLabel="Filter by Email"
-                            title="Filter by Email"
-                          >
-                            <input 
-                              type="text" 
-                              placeholder="e.g. charlotte@cassina"
-                              className="input-field"
-                              value={stagedFilters.email || ''}
-                              onChange={(e) => setStagedFilters({ ...stagedFilters, email: e.target.value })}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleApplyFilter('customers', 'email', { email: stagedFilters.email });
-                              }}
-                            />
-                          </FilterPopover>
-                        </th>
-
-                        {/* Phone Column Header with Filter Popover */}
-                        <th className="py-4 px-6 font-semibold relative select-none">
-                          <FilterPopover
-                            isOpen={activeFilterDropdown.table === 'customers' && activeFilterDropdown.column === 'phone'}
-                            onToggle={() => setActiveFilterDropdown({
-                              table: 'customers',
-                              column: activeFilterDropdown.column === 'phone' ? '' : 'phone'
-                            })}
-                            onClose={() => setActiveFilterDropdown({ table: '', column: '' })}
-                            onClear={() => handleClearFilter('customers', 'phone', ['phone'])}
-                            onApply={() => handleApplyFilter('customers', 'phone', { phone: stagedFilters.phone })}
-                            isActive={!!appliedFilters.customers.phone}
-                            columnTitle="COMMS_PHONE"
-                            filterLabel="Filter by Phone"
-                            title="Filter by Phone"
-                          >
-                            <input 
-                              type="text" 
-                              placeholder="e.g. +33 6"
-                              className="input-field font-mono"
-                              value={stagedFilters.phone || ''}
-                              onChange={(e) => setStagedFilters({ ...stagedFilters, phone: e.target.value })}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleApplyFilter('customers', 'phone', { phone: stagedFilters.phone });
-                              }}
-                            />
-                          </FilterPopover>
-                        </th>
-                        <th className="py-4 px-6 font-semibold text-center select-none">DELETE</th>
-                      </tr>
-                    </thead>
-                    <VirtualizedTableBody
-                      items={customers}
-                      rowHeight={64}
-                      colSpan={4}
-                      emptyPlaceholder={
-                        <tr>
-                          <td colSpan="4" className="py-8 text-center text-[#9ca3af] uppercase tracking-widest font-mono">
-                            No registered client records returned.
-                          </td>
-                        </tr>
-                      }
-                      renderRow={(c) => (
-                        <tr key={c.id} className="hover:bg-[#171924]/30 transition-colors duration-150">
-                          <td className="py-4 px-6">
-                            <span className="font-semibold block text-white">{c.full_name}</span>
-                            <span className="text-[8px] text-[#9ca3af] block font-mono">
-                              STAGE DATE: {new Date(c.created_at).toLocaleDateString()}
-                            </span>
-                          </td>
-                          <td className="py-4 px-6 font-semibold text-[var(--accent)] font-mono">{c.email}</td>
-                          <td className="py-4 px-6 text-[#f3f4f6] font-mono">{c.phone_number || '—'}</td>
-                          <td className="py-4 px-6 text-center">
-                            <button 
-                              onClick={() => setDeleteConfirm({ show: true, type: 'customer', id: c.id })} 
-                              className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-[#ef4444] hover:text-[#ef4444] rounded transition-all"
-                              title="Delete Customer Profile"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </td>
-                        </tr>
-                      )}
-                    />
-                  </table>
-                </div>
- 
-              </div>
- 
-            </div>
- 
-          </div>
-        )}
- 
-        {/* ================= TAB 4: ORDERS ================= */}
-        {currentTab === 'orders' && (
-          <div className="editorial-container">
-            {/* Header */}
-            <PageHeader tag="[Transaction Module]" title="Transaction Ledger" />
- 
-            {/* CTA bar */}
-            <div className="flex justify-between items-center mb-6 pl-6 pr-2">
-              <div className="text-xs font-mono text-[#9ca3af] flex items-center gap-2">
-                <span>Showing {orders.length} transaction logs settled in database.</span>
-                {Object.keys(appliedFilters.orders).length > 0 && (
-                  <button 
-                    onClick={() => handleClearAllFilters('orders')}
-                    className="px-2 py-0.5 border border-[#ef4444]/30 hover:border-[#ef4444] text-[#ef4444] bg-[#ef4444]/10 rounded text-[9px] font-mono uppercase tracking-wider transition-all cursor-pointer hover:bg-[#ef4444]/20"
-                  >
-                    Clear All Filters ×
-                  </button>
-                )}
-              </div>
-              <button 
-                onClick={() => setShowOrderModal(true)} 
-                className="btn-primary font-mono text-xs uppercase tracking-wider"
-              >
-                <Plus size={14} /> Compile Transaction
-              </button>
-            </div>
- 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              
-              {/* Order Transaction listing - Stretched Full Width */}
-              <div className="lg:col-span-12">
-                
-                {/* Table */}
-                <div className="border border-[#2a2d3a] bg-[#12131a] rounded-lg overflow-visible relative">
-                  {loading && (
-                    <div className="absolute inset-0 bg-[#0b0b12]/50 backdrop-blur-sm z-[40] flex items-center justify-center rounded-lg animate-none">
-                      <div className="flex flex-col items-center gap-2 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-lg shadow-2xl">
-                        <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
-                        <span className="font-mono text-[9px] uppercase tracking-widest text-[#9ca3af]">// Syncing Transactions</span>
-                      </div>
-                    </div>
-                  )}
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-[#171924] text-[#9ca3af] uppercase tracking-wider border-b border-[#2a2d3a]">
-                        
-                        {/* Transaction ID Column Header with Filter Popover */}
-                        <th className="py-4 px-6 font-semibold font-mono relative select-none">
-                          <div className="flex items-center gap-2">
-                            <span>TXN_ID</span>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveFilterDropdown({
-                                  table: 'orders',
-                                  column: activeFilterDropdown.column === 'txn_id' ? '' : 'txn_id'
-                                });
-                              }}
-                              className={`hover:text-white transition-colors p-1 ${appliedFilters.orders.txn_id ? 'text-[var(--accent)] font-bold' : 'text-[#555770]'}`}
-                              title="Filter by Transaction ID"
-                            >
-                              <Filter size={12} />
-                            </button>
-                          </div>
-                          
-                          {activeFilterDropdown.table === 'orders' && activeFilterDropdown.column === 'txn_id' && (
-                            <div className="absolute top-12 left-6 z-50 w-64 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-md shadow-2xl normal-case font-normal text-xs text-[#f3f4f6]">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); setActiveFilterDropdown({ table: '', column: '' }); }}
-                                className="absolute top-3 right-3 text-[#9ca3af] hover:text-white"
-                              >
-                                <X size={12} />
-                              </button>
-                              <div className="mb-3">
-                                <label className="form-label mb-1">Filter by TXN_ID</label>
-                                <input 
-                                  type="text" 
-                                  placeholder="e.g. 0001"
-                                  className="input-field font-mono"
-                                  value={stagedFilters.txn_id || ''}
-                                  onChange={(e) => setStagedFilters({ ...stagedFilters, txn_id: e.target.value })}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleApplyFilter('orders', 'txn_id', { txn_id: stagedFilters.txn_id });
-                                  }}
-                                />
-                              </div>
-                              <div className="flex gap-2 justify-end mt-4">
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleClearFilter('orders', 'txn_id', ['txn_id']); }}
-                                  className="btn-ghost py-1 px-2.5 text-[10px]"
-                                >
-                                  Clear
-                                </button>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleApplyFilter('orders', 'txn_id', { txn_id: stagedFilters.txn_id }); }}
-                                  className="btn-primary py-1 px-3 text-[10px]"
-                                >
-                                  Apply
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </th>
- 
-                        {/* Client Decoder Column Header with Filter Popover */}
-                        <th className="py-4 px-6 font-semibold relative select-none">
-                          <div className="flex items-center gap-2">
-                            <span>CLIENT DECODER</span>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveFilterDropdown({
-                                  table: 'orders',
-                                  column: activeFilterDropdown.column === 'customer' ? '' : 'customer'
-                                });
-                              }}
-                              className={`hover:text-white transition-colors p-1 ${appliedFilters.orders.customer_name ? 'text-[var(--accent)] font-bold' : 'text-[#555770]'}`}
-                              title="Filter by Client"
-                            >
-                              <Filter size={12} />
-                            </button>
-                          </div>
-                          
-                          {activeFilterDropdown.table === 'orders' && activeFilterDropdown.column === 'customer' && (
-                            <div className="absolute top-12 left-6 z-50 w-64 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-md shadow-2xl normal-case font-normal text-xs text-[#f3f4f6]">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); setActiveFilterDropdown({ table: '', column: '' }); }}
-                                className="absolute top-3 right-3 text-[#9ca3af] hover:text-white"
-                              >
-                                <X size={12} />
-                              </button>
-                              <div className="mb-3">
-                                <label className="form-label mb-1">Filter by Client Name</label>
-                                <input 
-                                  type="text" 
-                                  placeholder="e.g. Charlotte"
-                                  className="input-field"
-                                  value={stagedFilters.customer_name || ''}
-                                  onChange={(e) => setStagedFilters({ ...stagedFilters, customer_name: e.target.value })}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleApplyFilter('orders', 'customer', { customer_name: stagedFilters.customer_name });
-                                  }}
-                                />
-                              </div>
-                              <div className="flex gap-2 justify-end mt-4">
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleClearFilter('orders', 'customer', ['customer_name']); }}
-                                  className="btn-ghost py-1 px-2.5 text-[10px]"
-                                >
-                                  Clear
-                                </button>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleApplyFilter('orders', 'customer', { customer_name: stagedFilters.customer_name }); }}
-                                  className="btn-primary py-1 px-3 text-[10px]"
-                                >
-                                  Apply
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </th>
- 
-                        {/* Value Sum Column Header with Filter Popover */}
-                        <th className="py-4 px-6 font-semibold text-right relative select-none">
-                          <div className="flex items-center gap-2 justify-end">
-                            <span>VAL_SUM</span>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveFilterDropdown({
-                                  table: 'orders',
-                                  column: activeFilterDropdown.column === 'amount' ? '' : 'amount'
-                                });
-                              }}
-                              className={`hover:text-white transition-colors p-1 ${ (appliedFilters.orders.min_amount || appliedFilters.orders.max_amount) ? 'text-[var(--accent)] font-bold' : 'text-[#555770]'}`}
-                              title="Filter by Value"
-                            >
-                              <Filter size={12} />
-                            </button>
-                          </div>
-                          
-                          {activeFilterDropdown.table === 'orders' && activeFilterDropdown.column === 'amount' && (
-                            <div className="absolute top-12 right-6 z-50 w-72 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-md shadow-2xl normal-case font-normal text-xs text-[#f3f4f6] text-left">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); setActiveFilterDropdown({ table: '', column: '' }); }}
-                                className="absolute top-3 right-3 text-[#9ca3af] hover:text-white"
-                              >
-                                <X size={12} />
-                              </button>
-                              
-                              <div className="grid grid-cols-2 gap-2 mb-3">
-                                <div>
-                                  <label className="form-label mb-1">Min Value ($)</label>
-                                  <input 
-                                    type="number" 
-                                    step="0.01"
-                                    placeholder="0.00"
-                                    className="input-field font-mono text-xs"
-                                    value={stagedFilters.min_amount || ''}
-                                    onChange={(e) => setStagedFilters({ ...stagedFilters, min_amount: e.target.value })}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="form-label mb-1">Max Value ($)</label>
-                                  <input 
-                                    type="number" 
-                                    step="0.01"
-                                    placeholder="5000.00"
-                                    className="input-field font-mono text-xs"
-                                    value={stagedFilters.max_amount || ''}
-                                    onChange={(e) => setStagedFilters({ ...stagedFilters, max_amount: e.target.value })}
-                                  />
-                                </div>
-                              </div>
-                              
-                              <div className="flex gap-2 justify-end mt-4">
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleClearFilter('orders', 'amount', ['min_amount', 'max_amount']); }}
-                                  className="btn-ghost py-1 px-2.5 text-[10px]"
-                                >
-                                  Clear
-                                </button>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleApplyFilter('orders', 'amount', { min_amount: stagedFilters.min_amount, max_amount: stagedFilters.max_amount }); }}
-                                  className="btn-primary py-1 px-3 text-[10px]"
-                                >
-                                  Apply
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </th>
-                        <th className="py-4 px-6 font-semibold text-center select-none">COMMAND</th>
-                      </tr>
-                    </thead>
-                    <VirtualizedTableBody
-                      items={orders}
-                      rowHeight={64}
-                      colSpan={4}
-                      emptyPlaceholder={
-                        <tr>
-                          <td colSpan="4" className="py-8 text-center text-[#9ca3af] uppercase tracking-widest font-mono">
-                            No transaction blocks logged to database.
-                          </td>
-                        </tr>
-                      }
-                      renderRow={(o) => (
-                        <tr key={o.id} className="hover:bg-[#171924]/30 transition-colors duration-150">
-                          <td className="py-4 px-6 text-[var(--accent)] font-bold font-mono">
-                            #TRX-{String(o.id).padStart(4, '0')}
-                            <span className="block font-normal text-[8px] text-[#9ca3af]">
-                              {new Date(o.created_at).toLocaleString()}
-                            </span>
-                          </td>
-                          <td className="py-4 px-6">
-                            <span className="font-semibold block text-white">{o.customer?.full_name || 'Dieter Rams'}</span>
-                            <span className="text-[8px] text-[#9ca3af] block font-mono">
-                              {o.customer?.email}
-                            </span>
-                          </td>
-                          <td className="py-4 px-6 text-right font-bold font-mono text-white">
-                            ${o.total_amount.toFixed(2)}
-                          </td>
-                          <td className="py-4 px-6">
-                            <div className="flex gap-2 justify-center">
-                              <button 
-                                onClick={() => setSelectedOrder(o)} 
-                                className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-white hover:text-white rounded transition-all"
-                                title="View Order Details"
-                              >
-                                <Eye size={12} />
-                              </button>
-                              <button 
-                                onClick={() => setDeleteConfirm({ show: true, type: 'order', id: o.id })} 
-                                className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-[#ef4444] hover:text-[#ef4444] rounded transition-all"
-                                title="Cancel/Rollback Order"
-                              >
-                                <X size={12} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    />
-                  </table>
-                </div>
- 
-              </div>
- 
-            </div>
- 
-          </div>
-        )}
- 
       </main>
- 
+
       {/* ================= MODAL: INJECT SKU / EDIT SKU CATALOG ================= */}
       <Modal
         isOpen={showProductModal || !!editProduct}
@@ -1647,7 +758,7 @@ export default function App() {
           </div>
         </form>
       </Modal>
- 
+
       {/* ================= MODAL: REGISTER CLIENT NODE ================= */}
       <Modal
         isOpen={showCustomerModal}
@@ -1713,14 +824,14 @@ export default function App() {
           </div>
         </form>
       </Modal>
- 
+
       {/* ================= MODAL: COMPILE TRANSACTION ================= */}
       <Modal
         isOpen={showOrderModal}
         onClose={() => setShowOrderModal(false)}
         tag="[Transaction Compiler Engine]"
         title="Compile Transaction"
-        subTitle="WRITE MODE: DATABASE élő ACID TRANSACTION"
+        subTitle="WRITE MODE: DATABASE LIVE ACID TRANSACTION"
         size="lg"
       >
         <form onSubmit={handleOrderCreate} className="flex flex-col gap-5">
@@ -1757,7 +868,7 @@ export default function App() {
                   <option value="">CHOOSE SKU...</option>
                   {products.map(p => (
                     <option key={p.id} value={p.id} disabled={p.quantity_in_stock <= 0}>
-                      {p.sku} — {p.name} (${p.price.toFixed(2)}) [{p.quantity_in_stock} AVAILABLE]
+                      {p.sku} — {p.name} ({formatCurrency(p.price)}) [{p.quantity_in_stock} AVAILABLE]
                     </option>
                   ))}
                 </select>
@@ -1810,9 +921,9 @@ export default function App() {
                       <tr key={index} className="hover:bg-[#171924]/30">
                         <td className="p-2 font-bold text-[var(--accent)]">{item.sku}</td>
                         <td className="p-2 font-body text-white">{item.name}</td>
-                        <td className="p-2 text-right">${item.price.toFixed(2)}</td>
+                        <td className="p-2 text-right">{formatCurrency(item.price)}</td>
                         <td className="p-2 text-right text-white font-bold">{item.quantity}</td>
-                        <td className="p-2 text-right text-[var(--accent)] font-bold">${(item.price * item.quantity).toFixed(2)}</td>
+                        <td className="p-2 text-right text-[var(--accent)] font-bold">{formatCurrency(item.price * item.quantity)}</td>
                         <td className="p-2 text-center">
                           <button 
                             type="button" 
@@ -1834,7 +945,7 @@ export default function App() {
           {/* Live subtotal */}
           <div className="border-t border-[#2a2d3a] pt-4 flex justify-between items-center select-none">
             <span className="font-mono text-xs uppercase tracking-wider font-semibold text-[#9ca3af]">Total Transaction:</span>
-            <span className="font-display font-bold text-2xl text-white">${orderTotalLive.toFixed(2)}</span>
+            <span className="font-display font-bold text-2xl text-white">{formatCurrency(orderTotalLive)}</span>
           </div>
 
           <div className="h-[1px] bg-[#2a2d3a] mt-2"></div>
@@ -1858,14 +969,14 @@ export default function App() {
           </div>
         </form>
       </Modal>
- 
+
       {/* ================= MODAL: ORDER DETAILS (Refined Overlay) ================= */}
       <Modal
         isOpen={!!selectedOrder}
         onClose={() => setSelectedOrder(null)}
         tag="[Operational Audit]"
-        title={`Transaction #TRX-${String(selectedOrder?.id).padStart(4, '0')}`}
-        subTitle={`INVENTORY BLOCK WRITE TIME: ${selectedOrder ? new Date(selectedOrder.created_at).toLocaleString() : ''}`}
+        title={`Transaction #TRX-${padOrderId(selectedOrder?.id)}`}
+        subTitle={`INVENTORY BLOCK WRITE TIME: ${selectedOrder ? formatDateTime(selectedOrder.created_at) : ''}`}
         size="lg"
       >
         {selectedOrder && (
@@ -1902,9 +1013,9 @@ export default function App() {
                     <tr key={item.id} className="hover:bg-[#171924]/30">
                       <td className="p-3 font-bold text-[var(--accent)]">{item.product?.sku || 'SKU'}</td>
                       <td className="p-3 font-body text-white">{item.product?.name || 'Product'}</td>
-                      <td className="p-3 text-right">${item.unit_price.toFixed(2)}</td>
+                      <td className="p-3 text-right">{formatCurrency(item.unit_price)}</td>
                       <td className="p-3 text-right text-white font-bold">{item.quantity}</td>
-                      <td className="p-3 text-right text-[var(--accent)] font-bold">${item.line_total.toFixed(2)}</td>
+                      <td className="p-3 text-right text-[var(--accent)] font-bold">{formatCurrency(item.line_total)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1914,12 +1025,12 @@ export default function App() {
             {/* Total Aggregate */}
             <div className="flex justify-between items-center border-t border-[#2a2d3a] pt-4 select-none">
               <span className="font-mono text-xs uppercase tracking-wider font-semibold text-[#9ca3af]">AGGREGATE VALUE:</span>
-              <span className="font-display font-bold text-2xl text-white">${selectedOrder.total_amount.toFixed(2)}</span>
+              <span className="font-display font-bold text-2xl text-white">{formatCurrency(selectedOrder.total_amount)}</span>
             </div>
           </>
         )}
       </Modal>
- 
+
       {/* ================= MODAL: GENERIC CONFIRMATION (Refined HUD Overlay) ================= */}
       {deleteConfirm.show && (
         <div className="fixed inset-0 bg-black bg-opacity-70 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
@@ -1943,11 +1054,7 @@ export default function App() {
               </button>
               
               <button 
-                onClick={() => {
-                  if (deleteConfirm.type === 'product') handleProductDelete(deleteConfirm.id);
-                  if (deleteConfirm.type === 'customer') handleCustomerDelete(deleteConfirm.id);
-                  if (deleteConfirm.type === 'order') handleOrderCancel(deleteConfirm.id);
-                }}
+                onClick={handleConfirmDelete}
                 className="btn-primary"
                 style={{ backgroundColor: '#ef4444', borderColor: '#ef4444' }}
               >
@@ -1957,7 +1064,7 @@ export default function App() {
           </div>
         </div>
       )}
- 
+
     </div>
   );
 }

@@ -12,10 +12,11 @@ export default function FilterPopover({
   filterLabel,
   title,
   positionClass = 'top-12 left-6',
+  className = 'flex items-center gap-2',
   children
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className={className}>
       <span>{columnTitle}</span>
       <button 
         onClick={(e) => {
