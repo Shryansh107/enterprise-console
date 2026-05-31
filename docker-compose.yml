@@ -50,6 +50,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     image: ethara-frontend:latest
+    pull_policy: build
     container_name: ethara-frontend
     ports:
       - "5173:5173"
