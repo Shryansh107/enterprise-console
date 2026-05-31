@@ -281,7 +281,7 @@ export default function App() {
   const handleProductDelete = async (id) => {
     try {
       await api.products.delete(id);
-      showToast('Product successfully removed from database.');
+      showToast('Product successfully deleted.');
       loadProducts();
     } catch (err) {
       showToast(err.message, 'error');
@@ -318,7 +318,7 @@ export default function App() {
   const handleCustomerDelete = async (id) => {
     try {
       await api.customers.delete(id);
-      showToast('Customer record successfully purged.');
+      showToast('Customer profile successfully deleted.');
       loadCustomers();
     } catch (err) {
       showToast(err.message, 'error');
@@ -416,7 +416,7 @@ export default function App() {
   const handleOrderCancel = async (id) => {
     try {
       await api.orders.delete(id);
-      showToast('Transaction successfully rolled back. Catalog stocks replenished.');
+      showToast('Order successfully cancelled. Stock levels restored.');
       loadOrders();
       loadProducts();
     } catch (err) {
@@ -677,7 +677,7 @@ export default function App() {
                     Histogram showing inventory quantities per product SKU code.
                   </p>
                   <button onClick={() => navigateTo('products')} className="btn-ghost">
-                    Catalog View <ChevronRight size={12} />
+                    View Catalog  <ChevronRight size={12} />
                   </button>
                 </div>
               </div>
@@ -724,30 +724,9 @@ export default function App() {
                     <span className="font-mono text-[9px] uppercase tracking-wider font-bold text-[var(--success)]">Nominal Datalink</span>
                   </div>
                 </div>
- 
               </div>
  
             </div>
- 
-            {/* Cyber terminal decorative block */}
-            <div className="border-t border-[#2a2d3a] my-12"></div>
- 
-            <section className="grid grid-cols-1 md:grid-cols-2 gap-12 select-none">
-              <div>
-                <p className="font-body text-xs leading-relaxed text-[#9ca3af]">
-                  <span className="text-[var(--accent)] font-semibold font-mono block mb-2">[PLATFORM SUMMARY]</span>
-                  Ethara Systems features absolute B2B catalog protection and transaction processing. By utilizing ACID database transactions, safe overdraw checks, and relational cascade deletes, your backend records are fully isolated from race conditions or partial writes. Spacing and layouts conform to elite operational design.
-                </p>
-              </div>
-              <div className="border-l border-[#2a2d3a] pl-8 py-2 flex flex-col justify-between">
-                <blockquote className="font-mono text-xs leading-normal text-[#9ca3af] italic">
-                  "Efficiency and visual restraint are the pillars of serious enterprise engineering. Clear data hierarchy ensures rapid operational scanning."
-                </blockquote>
-                <cite className="font-mono text-[8px] tracking-widest uppercase block mt-4 font-bold not-italic text-[#555770]">
-                  // Operational Directive // Ethara AI
-                </cite>
-              </div>
-            </section>
  
           </div>
         )}
@@ -1342,7 +1321,7 @@ export default function App() {
                             </div>
                           )}
                         </th>
-                        <th className="py-4 px-6 font-semibold text-center select-none">PURGE</th>
+                        <th className="py-4 px-6 font-semibold text-center select-none">DELETE</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#2a2d3a] text-[#f3f4f6]">
@@ -1367,7 +1346,7 @@ export default function App() {
                               <button 
                                 onClick={() => setDeleteConfirm({ show: true, type: 'customer', id: c.id })} 
                                 className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-[#ef4444] hover:text-[#ef4444] rounded transition-all"
-                                title="Purge Customer Record"
+                                title="Delete Customer Profile"
                               >
                                 <Trash2 size={12} />
                               </button>
@@ -2125,21 +2104,21 @@ export default function App() {
         <div className="fixed inset-0 bg-black bg-opacity-70 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-[#12131a] border border-[#ef4444]/30 w-full max-w-md p-8 relative rounded-lg shadow-2xl">
             <h3 className="font-display font-semibold text-lg uppercase tracking-wider mb-4 text-[#ef4444]">
-              // Destructive Action Warning
+              // Warning: Permanent Action
             </h3>
             
             <p className="font-body text-xs leading-relaxed text-[#9ca3af] mb-8">
-              {deleteConfirm.type === 'order' && 'PURGE_WARNING: Cancelling this transaction block will permanently drop database entries and immediately replenish the staged quantities back to inventory catalog logs.'}
-              {deleteConfirm.type === 'product' && 'PURGE_WARNING: Deleting this product SKU will wipe its database indexes. Historical orders logs will remain intact but product metadata will be detached.'}
-              {deleteConfirm.type === 'customer' && 'PURGE_WARNING: Cascade deletes are active. Purging this customer node will cascade destroy their historical transaction logs completely.'}
+              {deleteConfirm.type === 'order' && 'Are you sure you want to cancel this order? This action will permanently remove the order and return the reserved stock back to the inventory.'}
+              {deleteConfirm.type === 'product' && 'Are you sure you want to delete this product? This will permanently remove the product from your catalog. Previous orders containing this product will not be affected.'}
+              {deleteConfirm.type === 'customer' && 'Are you sure you want to delete this customer profile? This will permanently delete the customer along with all of their order history. This action cannot be undone.'}
             </p>
- 
+
             <div className="flex gap-4 justify-end">
               <button 
                 onClick={() => setDeleteConfirm({ show: false, type: '', id: null })}
                 className="btn-secondary"
               >
-                Abort Force
+                Cancel
               </button>
               
               <button 
@@ -2151,7 +2130,7 @@ export default function App() {
                 className="btn-primary"
                 style={{ backgroundColor: '#ef4444', borderColor: '#ef4444' }}
               >
-                Confirm Purge Run
+                {deleteConfirm.type === 'order' ? 'Cancel Order' : 'Delete'}
               </button>
             </div>
           </div>
