@@ -111,59 +111,7 @@ If you want to rebuild the custom backend/frontend Docker images and push them t
    docker push shryansh/ethara-frontend:latest
    ```
 
----
 
-### Method B: Manual Local Development
-
-#### 1. Setup Postgres Database
-Ensure a local PostgreSQL instance is running, and create an empty database:
-```sql
-CREATE DATABASE ethara_inventory;
-```
-
-#### 2. Run the Backend FastAPI Server
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   # On Windows:
-   venv\Scripts\activate
-   # On macOS/Linux:
-   source venv/bin/activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Create a `.env` file in the `backend/` directory or set your environment variables:
-   ```env
-   DATABASE_URL=postgresql://your_user:your_password@localhost:5432/ethara_inventory
-   CORS_ORIGINS=http://localhost:5173
-   ```
-5. Run the FastAPI server (it automatically runs table creation and demo data seeding on first boot!):
-   ```bash
-   uvicorn app.main:app --reload --port 8000
-   ```
-
-#### 3. Run the Frontend React Application
-1. Navigate to the frontend directory:
-   ```bash
-   cd ../frontend
-   ```
-2. Install Node dependencies:
-   ```bash
-   npm install
-   ```
-3. Run the Vite development server:
-   ```bash
-   npm run dev
-   ```
-4. Open [http://localhost:5173](http://localhost:5173) in your browser.
-
----
 
 ## 🛠️ API Endpoint Summary
 
@@ -189,10 +137,4 @@ CREATE DATABASE ethara_inventory;
 ### System
 - `GET /api/health` - Retrieve system health status
 
----
 
-## 🎯 Verification Scenarios to Try
-1. **Low Stock Badge:** View the Dashboard. You will see warning metrics. Navigate to **Products**. Notice `StarkDesk Lamp` displays an italicized, bordered `[LOW STOCK]` warning.
-2. **Out of Stock Badge:** `Brutalist Teapot` displays a bold, inverted `[OUT OF STOCK]` badge.
-3. **Safe Transactions (Overdraw Protection):** Go to **Orders**, select a customer, select `StarkDesk Lamp` (4 items in stock), and attempt to buy `5` items. Notice that the frontend warns you, and if submitted, the backend rejects it with an informative bad request exception detail `400` and does not commit the order, guaranteeing stock integrity.
-4. **Color Inversion Hover:** Hover your mouse over any table row, dashboard metric card, or the primary action buttons. The colors invert instantly (black becomes white, white becomes black), offering premium tactile feedback.
