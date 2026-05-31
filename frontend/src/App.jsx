@@ -26,6 +26,7 @@ import PageHeader from './components/PageHeader';
 import HUDToast from './components/HUDToast';
 import Modal from './components/Modal';
 import FilterPopover from './components/FilterPopover';
+import VirtualizedTableBody from './components/VirtualizedTableBody';
 
 export default function App() {
   // Navigation State
@@ -492,13 +493,6 @@ export default function App() {
           </nav>
         </div>
 
-        <div>
-          <div className="h-[1px] bg-[#2a2d3a] mb-4"></div>
-          <p className="font-mono text-[9px] text-[#555770] tracking-widest uppercase">
-            OPERATIONS_FEEDS_v2.0<br/>
-            STATUS: SECURE // CONNECTED
-          </p>
-        </div>
       </aside>
 
       {/* Navigation Topbar (Mobile) */}
@@ -1003,75 +997,76 @@ export default function App() {
                         </th>
                         <th className="py-4 px-6 font-semibold text-center select-none">COMMAND</th>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#2a2d3a] text-[#f3f4f6]">
-                      {products.length === 0 ? (
+                    </thead>                    <VirtualizedTableBody
+                      items={products}
+                      rowHeight={64}
+                      colSpan={5}
+                      emptyPlaceholder={
                         <tr>
                           <td colSpan="5" className="py-8 text-center text-[#9ca3af] uppercase tracking-widest font-mono">
                             No records matching query filters.
                           </td>
                         </tr>
-                      ) : (
-                        products.map((p) => {
-                          const isLowStock = p.quantity_in_stock <= LOW_STOCK_THRESHOLD && p.quantity_in_stock > 0;
-                          const isOutOfStock = p.quantity_in_stock === 0;
- 
-                          return (
-                            <tr key={p.id} className="hover:bg-[#171924]/30 transition-colors duration-150">
-                              <td className="py-4 px-6 font-bold font-mono text-[var(--accent)]">{p.sku}</td>
-                              <td className="py-4 px-6">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-white">{p.name}</span>
-                                  {isLowStock && (
-                                    <span 
-                                      className="px-1 py-0.5 border border-[#f59e0b]/30 bg-[#f59e0b]/10 text-[#f59e0b] rounded text-[7.5px] font-mono uppercase tracking-wider font-semibold leading-none align-middle"
-                                      style={{ margin: 0, padding: '1px 3px' }}
-                                    >
-                                      Low Stock
-                                    </span>
-                                  )}
-                                  {isOutOfStock && (
-                                    <span 
-                                      className="px-1 py-0.5 border border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444] rounded text-[7.5px] font-mono uppercase tracking-wider font-semibold leading-none align-middle"
-                                      style={{ margin: 0, padding: '1px 3px' }}
-                                    >
-                                      Depleted
-                                    </span>
-                                  )}
-                                </div>
-                                <span className="text-[8px] text-[#9ca3af] block font-mono mt-1">
-                                  LAST PATCHED: {new Date(p.updated_at).toLocaleString()}
-                                </span>
-                              </td>
-                              <td className="py-4 px-6 text-right font-semibold font-mono text-white">${p.price.toFixed(2)}</td>
-                              <td className="py-4 px-6 text-right">
-                                <div className="font-mono font-semibold text-white">
-                                  {p.quantity_in_stock}
-                                </div>
-                              </td>
-                              <td className="py-4 px-6">
-                                <div className="flex gap-2 justify-center">
-                                  <button 
-                                    onClick={() => setEditProduct(p)} 
-                                    className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-white hover:text-white rounded transition-all"
-                                    title="Edit Product"
+                      }
+                      renderRow={(p) => {
+                        const isLowStock = p.quantity_in_stock <= LOW_STOCK_THRESHOLD && p.quantity_in_stock > 0;
+                        const isOutOfStock = p.quantity_in_stock === 0;
+
+                        return (
+                          <tr key={p.id} className="hover:bg-[#171924]/30 transition-colors duration-150">
+                            <td className="py-4 px-6 font-bold font-mono text-[var(--accent)]">{p.sku}</td>
+                            <td className="py-4 px-6">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-white">{p.name}</span>
+                                {isLowStock && (
+                                  <span 
+                                    className="px-1 py-0.5 border border-[#f59e0b]/30 bg-[#f59e0b]/10 text-[#f59e0b] rounded text-[7.5px] font-mono uppercase tracking-wider font-semibold leading-none align-middle"
+                                    style={{ margin: 0, padding: '1px 3px' }}
                                   >
-                                    <Edit3 size={12} />
-                                  </button>
-                                  <button 
-                                    onClick={() => setDeleteConfirm({ show: true, type: 'product', id: p.id })} 
-                                    className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-[#ef4444] hover:text-[#ef4444] rounded transition-all"
-                                    title="Delete Product"
+                                    Low Stock
+                                  </span>
+                                )}
+                                {isOutOfStock && (
+                                  <span 
+                                    className="px-1 py-0.5 border border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444] rounded text-[7.5px] font-mono uppercase tracking-wider font-semibold leading-none align-middle"
+                                    style={{ margin: 0, padding: '1px 3px' }}
                                   >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
+                                    Depleted
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[8px] text-[#9ca3af] block font-mono mt-1">
+                                LAST PATCHED: {new Date(p.updated_at).toLocaleString()}
+                              </span>
+                            </td>
+                            <td className="py-4 px-6 text-right font-semibold font-mono text-white">${p.price.toFixed(2)}</td>
+                            <td className="py-4 px-6 text-right">
+                              <div className="font-mono font-semibold text-white">
+                                {p.quantity_in_stock}
+                              </div>
+                            </td>
+                            <td className="py-4 px-6">
+                              <div className="flex gap-2 justify-center">
+                                <button 
+                                  onClick={() => setEditProduct(p)} 
+                                  className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-white hover:text-white rounded transition-all"
+                                  title="Edit Product"
+                                >
+                                  <Edit3 size={12} />
+                                </button>
+                                <button 
+                                  onClick={() => setDeleteConfirm({ show: true, type: 'product', id: p.id })} 
+                                  className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-[#ef4444] hover:text-[#ef4444] rounded transition-all"
+                                  title="Delete Product"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      }}
+                    />
                   </table>
                 </div>
  
@@ -1217,37 +1212,39 @@ export default function App() {
                         <th className="py-4 px-6 font-semibold text-center select-none">DELETE</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#2a2d3a] text-[#f3f4f6]">
-                      {customers.length === 0 ? (
+                    <VirtualizedTableBody
+                      items={customers}
+                      rowHeight={64}
+                      colSpan={4}
+                      emptyPlaceholder={
                         <tr>
                           <td colSpan="4" className="py-8 text-center text-[#9ca3af] uppercase tracking-widest font-mono">
                             No registered client records returned.
                           </td>
                         </tr>
-                      ) : (
-                        customers.map((c) => (
-                          <tr key={c.id} className="hover:bg-[#171924]/30 transition-colors duration-150">
-                            <td className="py-4 px-6">
-                              <span className="font-semibold block text-white">{c.full_name}</span>
-                              <span className="text-[8px] text-[#9ca3af] block font-mono">
-                                STAGE DATE: {new Date(c.created_at).toLocaleDateString()}
-                              </span>
-                            </td>
-                            <td className="py-4 px-6 font-semibold text-[var(--accent)] font-mono">{c.email}</td>
-                            <td className="py-4 px-6 text-[#f3f4f6] font-mono">{c.phone_number || '—'}</td>
-                            <td className="py-4 px-6 text-center">
-                              <button 
-                                onClick={() => setDeleteConfirm({ show: true, type: 'customer', id: c.id })} 
-                                className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-[#ef4444] hover:text-[#ef4444] rounded transition-all"
-                                title="Delete Customer Profile"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))
+                      }
+                      renderRow={(c) => (
+                        <tr key={c.id} className="hover:bg-[#171924]/30 transition-colors duration-150">
+                          <td className="py-4 px-6">
+                            <span className="font-semibold block text-white">{c.full_name}</span>
+                            <span className="text-[8px] text-[#9ca3af] block font-mono">
+                              STAGE DATE: {new Date(c.created_at).toLocaleDateString()}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 font-semibold text-[var(--accent)] font-mono">{c.email}</td>
+                          <td className="py-4 px-6 text-[#f3f4f6] font-mono">{c.phone_number || '—'}</td>
+                          <td className="py-4 px-6 text-center">
+                            <button 
+                              onClick={() => setDeleteConfirm({ show: true, type: 'customer', id: c.id })} 
+                              className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-[#ef4444] hover:text-[#ef4444] rounded transition-all"
+                              title="Delete Customer Profile"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </td>
+                        </tr>
                       )}
-                    </tbody>
+                    />
                   </table>
                 </div>
  
@@ -1493,53 +1490,55 @@ export default function App() {
                         <th className="py-4 px-6 font-semibold text-center select-none">COMMAND</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#2a2d3a] text-[#f3f4f6]">
-                      {orders.length === 0 ? (
+                    <VirtualizedTableBody
+                      items={orders}
+                      rowHeight={64}
+                      colSpan={4}
+                      emptyPlaceholder={
                         <tr>
                           <td colSpan="4" className="py-8 text-center text-[#9ca3af] uppercase tracking-widest font-mono">
                             No transaction blocks logged to database.
                           </td>
                         </tr>
-                      ) : (
-                        orders.map((o) => (
-                          <tr key={o.id} className="hover:bg-[#171924]/30 transition-colors duration-150">
-                            <td className="py-4 px-6 text-[var(--accent)] font-bold font-mono">
-                              #TRX-{String(o.id).padStart(4, '0')}
-                              <span className="block font-normal text-[8px] text-[#9ca3af]">
-                                {new Date(o.created_at).toLocaleString()}
-                              </span>
-                            </td>
-                            <td className="py-4 px-6">
-                              <span className="font-semibold block text-white">{o.customer?.full_name || 'Dieter Rams'}</span>
-                              <span className="text-[8px] text-[#9ca3af] block font-mono">
-                                {o.customer?.email}
-                              </span>
-                            </td>
-                            <td className="py-4 px-6 text-right font-bold font-mono text-white">
-                              ${o.total_amount.toFixed(2)}
-                            </td>
-                            <td className="py-4 px-6">
-                              <div className="flex gap-2 justify-center">
-                                <button 
-                                  onClick={() => setSelectedOrder(o)} 
-                                  className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-white hover:text-white rounded transition-all"
-                                  title="View Order Details"
-                                >
-                                  <Eye size={12} />
-                                </button>
-                                <button 
-                                  onClick={() => setDeleteConfirm({ show: true, type: 'order', id: o.id })} 
-                                  className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-[#ef4444] hover:text-[#ef4444] rounded transition-all"
-                                  title="Cancel/Rollback Order"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                      }
+                      renderRow={(o) => (
+                        <tr key={o.id} className="hover:bg-[#171924]/30 transition-colors duration-150">
+                          <td className="py-4 px-6 text-[var(--accent)] font-bold font-mono">
+                            #TRX-{String(o.id).padStart(4, '0')}
+                            <span className="block font-normal text-[8px] text-[#9ca3af]">
+                              {new Date(o.created_at).toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className="font-semibold block text-white">{o.customer?.full_name || 'Dieter Rams'}</span>
+                            <span className="text-[8px] text-[#9ca3af] block font-mono">
+                              {o.customer?.email}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-right font-bold font-mono text-white">
+                            ${o.total_amount.toFixed(2)}
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="flex gap-2 justify-center">
+                              <button 
+                                onClick={() => setSelectedOrder(o)} 
+                                className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-white hover:text-white rounded transition-all"
+                                title="View Order Details"
+                              >
+                                <Eye size={12} />
+                              </button>
+                              <button 
+                                onClick={() => setDeleteConfirm({ show: true, type: 'order', id: o.id })} 
+                                className="p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-[#ef4444] hover:text-[#ef4444] rounded transition-all"
+                                title="Cancel/Rollback Order"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    </tbody>
+                    />
                   </table>
                 </div>
  
