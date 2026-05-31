@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -360,6 +360,11 @@ export default function App() {
       loadData();
     }
   }, [location.pathname, location.search]);
+
+  // Intercept route changes and show loader instantly before browser paints
+  useLayoutEffect(() => {
+    setLoading(true);
+  }, [location.pathname]);
 
   // Typewriter effect timer logic
   useEffect(() => {
