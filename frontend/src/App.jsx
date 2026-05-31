@@ -12,8 +12,10 @@ import {
   Menu, 
   ChevronRight, 
   Edit3, 
-  ExternalLink,
-  Info
+  Terminal,
+  Activity,
+  Cpu,
+  ShieldAlert
 } from 'lucide-react';
 import { api } from './services/api';
 
@@ -75,8 +77,8 @@ export default function App() {
       setError('');
     } catch (err) {
       console.error(err);
-      setError('Could not establish database connection. Please ensure the backend is running.');
-      showToast('Error syncing with database server.', 'error');
+      setError('DATALINK OFFLINE: COULD NOT ESTABLISH DB HANDSHAKE.');
+      showToast('DB HANDSHAKE FAILED.', 'error');
     } finally {
       setLoading(false);
     }
@@ -101,7 +103,7 @@ export default function App() {
   const handleProductCreate = async (e) => {
     e.preventDefault();
     if (!productForm.name || !productForm.sku || !productForm.price || productForm.quantity_in_stock === '') {
-      showToast('Please fill out all product details.', 'error');
+      showToast('INPUT REQUIRED: COMPLETE ALL DATA FIELDS.', 'error');
       return;
     }
     try {
@@ -111,7 +113,7 @@ export default function App() {
         price: parseFloat(productForm.price),
         quantity_in_stock: parseInt(productForm.quantity_in_stock)
       });
-      showToast(`Product ${productForm.sku} registered successfully.`);
+      showToast(`SKU ${productForm.sku} committed to catalog.`);
       setProductForm({ name: '', sku: '', price: '', quantity_in_stock: '' });
       loadData();
     } catch (err) {
@@ -122,7 +124,7 @@ export default function App() {
   const handleProductUpdate = async (e) => {
     e.preventDefault();
     if (!editProduct.name || !editProduct.sku || !editProduct.price || editProduct.quantity_in_stock === '') {
-      showToast('Please fill out all product details.', 'error');
+      showToast('INPUT REQUIRED: COMPLETE ALL DATA FIELDS.', 'error');
       return;
     }
     try {
@@ -132,7 +134,7 @@ export default function App() {
         price: parseFloat(editProduct.price),
         quantity_in_stock: parseInt(editProduct.quantity_in_stock)
       });
-      showToast(`Product ${editProduct.sku} updated.`);
+      showToast(`SKU ${editProduct.sku} compile patch success.`);
       setEditProduct(null);
       loadData();
     } catch (err) {
@@ -143,7 +145,7 @@ export default function App() {
   const handleProductDelete = async (id) => {
     try {
       await api.products.delete(id);
-      showToast('Product successfully deleted.');
+      showToast('SKU deleted from matrix.');
       loadData();
     } catch (err) {
       showToast(err.message, 'error');
@@ -156,12 +158,12 @@ export default function App() {
   const handleCustomerCreate = async (e) => {
     e.preventDefault();
     if (!customerForm.full_name || !customerForm.email) {
-      showToast('Please fill out customer name and email.', 'error');
+      showToast('INPUT REQUIRED: NAME AND EMAIL ARE MANDATORY.', 'error');
       return;
     }
     try {
       await api.customers.create(customerForm);
-      showToast(`Customer registered successfully.`);
+      showToast(`Customer profile injected successfully.`);
       setCustomerForm({ full_name: '', email: '', phone_number: '' });
       loadData();
     } catch (err) {
@@ -172,7 +174,7 @@ export default function App() {
   const handleCustomerDelete = async (id) => {
     try {
       await api.customers.delete(id);
-      showToast('Customer deleted.');
+      showToast('Customer record purged.');
       loadData();
     } catch (err) {
       showToast(err.message, 'error');
@@ -184,7 +186,7 @@ export default function App() {
   // Order Operations
   const addOrderItem = () => {
     if (!newOrderItem.product_id || newOrderItem.quantity <= 0) {
-      showToast('Please select a product and valid quantity.', 'error');
+      showToast('INPUT REQUIRED: SELECT PRODUCT AND SPECIFY QTY.', 'error');
       return;
     }
 
@@ -193,7 +195,7 @@ export default function App() {
 
     // Check inventory availability (front-end check)
     if (selectedProduct.quantity_in_stock < newOrderItem.quantity) {
-      showToast(`Warning: Requested quantity exceeds current available stock (${selectedProduct.quantity_in_stock}).`, 'error');
+      showToast(`OVERDRAW WARNING: AVAILABLE STOCK IS ${selectedProduct.quantity_in_stock}.`, 'error');
       return;
     }
 
@@ -204,7 +206,7 @@ export default function App() {
       const newQty = updatedItems[existingIndex].quantity + parseInt(newOrderItem.quantity);
       
       if (selectedProduct.quantity_in_stock < newQty) {
-        showToast(`Cannot exceed total available stock (${selectedProduct.quantity_in_stock}).`, 'error');
+        showToast(`OVERDRAW LIMIT: AVAILABLE STOCK IS ${selectedProduct.quantity_in_stock}.`, 'error');
         return;
       }
       
@@ -236,11 +238,11 @@ export default function App() {
   const handleOrderCreate = async (e) => {
     e.preventDefault();
     if (!orderForm.customer_id) {
-      showToast('Please select a customer for this order.', 'error');
+      showToast('INPUT REQUIRED: SELECT TARGET CLIENT.', 'error');
       return;
     }
     if (orderForm.items.length === 0) {
-      showToast('Please add at least one item to the order.', 'error');
+      showToast('INPUT REQUIRED: AT LEAST ONE SKU REQUIRED.', 'error');
       return;
     }
 
@@ -254,7 +256,7 @@ export default function App() {
       };
       
       await api.orders.create(orderPayload);
-      showToast('Order successfully generated and inventory updated.');
+      showToast('TRANSACTION SETTLED: STOCK INVENTORY DEDUCTED.');
       
       // Clear order form
       setOrderForm({ customer_id: '', items: [] });
@@ -268,7 +270,7 @@ export default function App() {
   const handleOrderCancel = async (id) => {
     try {
       await api.orders.delete(id);
-      showToast('Order successfully cancelled and inventory replenished.');
+      showToast('TRANSACTION ROLLBACK COMPLETE: INVENTORY RETURNED.');
       loadData();
     } catch (err) {
       showToast(err.message, 'error');
@@ -281,91 +283,98 @@ export default function App() {
   const lowStockProductsCount = products.filter(p => p.quantity_in_stock <= LOW_STOCK_THRESHOLD).length;
   const orderTotalLive = orderForm.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  // Tab navigation handler that closes mobile menu
   const navigateTo = (tab) => {
     setCurrentTab(tab);
     setMobileMenuOpen(false);
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] flex flex-col md:flex-row relative">
+    <div className="min-h-screen bg-[#0a0a0f] text-[#e0e0e0] flex flex-col md:flex-row relative">
       
+      {/* Decorative neon ambient mesh glows in background */}
+      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-[var(--accent)] opacity-[0.02] blur-[120px] pointer-events-none select-none"></div>
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[var(--accent-secondary)] opacity-[0.02] blur-[120px] pointer-events-none select-none"></div>
+
       {/* Dynamic Toast System */}
       {toast.show && (
         <div 
-          className="fixed bottom-8 right-8 z-[1000] border-2 border-black bg-black text-white px-6 py-4 flex items-center justify-between gap-4 max-w-sm cursor-pointer shadow-none"
-          style={{ transition: 'all 100ms steps(2)' }}
+          className="fixed bottom-8 right-8 z-[1000] border-2 border-[var(--accent)] bg-[#0d0d13] text-[#fff] px-6 py-4 flex items-center justify-between gap-4 max-w-sm cursor-pointer shadow-[0_0_15px_rgba(0,255,136,0.3)] cyber-chamfer-sm"
+          style={{ transition: 'all 150ms cubic-bezier(0.4, 0, 0.2, 1)' }}
           onClick={() => setToast(prev => ({ ...prev, show: false }))}
         >
           <div className="flex items-center gap-3">
-            <span className="font-mono text-xs uppercase tracking-wider font-bold">
-              [{toast.type === 'error' ? '!' : '✓'}]
+            <span className="font-mono text-xs uppercase tracking-wider font-bold text-[var(--accent)]">
+              [SYSTEM_ALERT]
             </span>
-            <span className="font-body text-sm leading-tight">{toast.message}</span>
+            <span className="font-body text-xs font-bold leading-tight">{toast.message}</span>
           </div>
-          <X size={14} className="opacity-60 hover:opacity-100" />
+          <X size={14} className="text-[var(--accent)] opacity-60 hover:opacity-100" />
         </div>
       )}
 
-      {/* Navigation Sidebar (Desktop) */}
-      <aside className="hidden md:flex flex-col w-72 bg-white v-line-thin p-8 shrink-0 justify-between select-none">
+      {/* Navigation Sidebar (Desktop HUD Console) */}
+      <aside className="hidden md:flex flex-col w-72 bg-[#12121a] border-r border-[#2a2a3a] p-8 shrink-0 justify-between select-none relative">
+        {/* Subtle glowing panel indicator */}
+        <div className="absolute top-0 right-0 h-full w-[2px] bg-gradient-to-b from-[var(--accent)] to-transparent opacity-20"></div>
+
         <div>
-          {/* Logo Brand */}
+          {/* Logo Brand with Glitch Effect */}
           <div className="mb-12">
-            <h1 className="font-display font-bold text-2xl tracking-tighter uppercase leading-none">
-              ETHARA <span className="block font-mono text-xs font-normal tracking-widest mt-2 text-[var(--muted-foreground)]">INVENTORY SYSTEM</span>
+            <h1 className="font-display font-black text-3xl tracking-widest uppercase leading-none">
+              <span className="cyber-glitch block text-white" data-text="ETHARA">ETHARA</span>
+              <span className="block font-mono text-[9px] font-bold tracking-[0.25em] mt-3 text-[var(--accent)]">SYSTEMS CONSOLE</span>
             </h1>
           </div>
 
-          <nav className="flex flex-col gap-2">
+          <nav className="flex flex-col gap-3">
             <button 
               onClick={() => navigateTo('dashboard')}
-              className={`w-full text-left px-4 py-3 font-mono text-xs tracking-wider uppercase flex justify-between items-center transition-all duration-100 ${currentTab === 'dashboard' ? 'bg-black text-white font-bold' : 'hover:bg-[var(--muted)] text-[var(--foreground)]'}`}
+              className={`w-full text-left px-4 py-3 font-mono text-[11px] tracking-wider uppercase flex justify-between items-center transition-all duration-150 border cyber-chamfer-sm ${currentTab === 'dashboard' ? 'bg-transparent border-[var(--accent)] text-[var(--accent)] shadow-[0_0_8px_rgba(0,255,136,0.2)] font-bold' : 'border-transparent hover:border-[#3a3a52] text-[#8c8cbe] hover:text-[#fff]'}`}
             >
-              <span>Dashboard</span>
-              <ChevronRight size={14} className={currentTab === 'dashboard' ? 'opacity-100' : 'opacity-0'} />
+              <span>[01] // DASHBOARD</span>
+              <Terminal size={12} className={currentTab === 'dashboard' ? 'text-[var(--accent)]' : 'opacity-40'} />
             </button>
             <button 
               onClick={() => navigateTo('products')}
-              className={`w-full text-left px-4 py-3 font-mono text-xs tracking-wider uppercase flex justify-between items-center transition-all duration-100 ${currentTab === 'products' ? 'bg-black text-white font-bold' : 'hover:bg-[var(--muted)] text-[var(--foreground)]'}`}
+              className={`w-full text-left px-4 py-3 font-mono text-[11px] tracking-wider uppercase flex justify-between items-center transition-all duration-150 border cyber-chamfer-sm ${currentTab === 'products' ? 'bg-transparent border-[var(--accent)] text-[var(--accent)] shadow-[0_0_8px_rgba(0,255,136,0.2)] font-bold' : 'border-transparent hover:border-[#3a3a52] text-[#8c8cbe] hover:text-[#fff]'}`}
             >
-              <span>Products ({products.length})</span>
-              <ChevronRight size={14} className={currentTab === 'products' ? 'opacity-100' : 'opacity-0'} />
+              <span>[02] // SKUS ({products.length})</span>
+              <Cpu size={12} className={currentTab === 'products' ? 'text-[var(--accent)]' : 'opacity-40'} />
             </button>
             <button 
               onClick={() => navigateTo('customers')}
-              className={`w-full text-left px-4 py-3 font-mono text-xs tracking-wider uppercase flex justify-between items-center transition-all duration-100 ${currentTab === 'customers' ? 'bg-black text-white font-bold' : 'hover:bg-[var(--muted)] text-[var(--foreground)]'}`}
+              className={`w-full text-left px-4 py-3 font-mono text-[11px] tracking-wider uppercase flex justify-between items-center transition-all duration-150 border cyber-chamfer-sm ${currentTab === 'customers' ? 'bg-transparent border-[var(--accent)] text-[var(--accent)] shadow-[0_0_8px_rgba(0,255,136,0.2)] font-bold' : 'border-transparent hover:border-[#3a3a52] text-[#8c8cbe] hover:text-[#fff]'}`}
             >
-              <span>Customers ({customers.length})</span>
-              <ChevronRight size={14} className={currentTab === 'customers' ? 'opacity-100' : 'opacity-0'} />
+              <span>[03] // CLIENTS ({customers.length})</span>
+              <Users size={12} className={currentTab === 'customers' ? 'text-[var(--accent)]' : 'opacity-40'} />
             </button>
             <button 
               onClick={() => navigateTo('orders')}
-              className={`w-full text-left px-4 py-3 font-mono text-xs tracking-wider uppercase flex justify-between items-center transition-all duration-100 ${currentTab === 'orders' ? 'bg-black text-white font-bold' : 'hover:bg-[var(--muted)] text-[var(--foreground)]'}`}
+              className={`w-full text-left px-4 py-3 font-mono text-[11px] tracking-wider uppercase flex justify-between items-center transition-all duration-150 border cyber-chamfer-sm ${currentTab === 'orders' ? 'bg-transparent border-[var(--accent)] text-[var(--accent)] shadow-[0_0_8px_rgba(0,255,136,0.2)] font-bold' : 'border-transparent hover:border-[#3a3a52] text-[#8c8cbe] hover:text-[#fff]'}`}
             >
-              <span>Orders ({orders.length})</span>
-              <ChevronRight size={14} className={currentTab === 'orders' ? 'opacity-100' : 'opacity-0'} />
+              <span>[04] // TRANSACTS ({orders.length})</span>
+              <Activity size={12} className={currentTab === 'orders' ? 'text-[var(--accent)]' : 'opacity-40'} />
             </button>
           </nav>
         </div>
 
         <div>
-          <div className="line-thin mb-4"></div>
-          <p className="font-mono text-[10px] text-[var(--muted-foreground)] tracking-widest uppercase">
-            STRICT MONOCHROME V1.0<br/>
-            DESIGN AS DISCIPLINE
+          <div className="h-[1px] bg-[#2a2a3a] mb-4"></div>
+          <p className="font-mono text-[9px] text-[#525280] tracking-widest uppercase">
+            HUD_INTERFACE_V2.0<br/>
+            STATUS: ACTIVE // GLITCH_ENG
           </p>
         </div>
       </aside>
 
       {/* Navigation Topbar (Mobile) */}
-      <header className="md:hidden flex items-center justify-between px-6 py-4 bg-white border-b-2 border-black w-full sticky top-0 z-50">
-        <h1 className="font-display font-bold text-lg tracking-tight uppercase">
-          ETHARA <span className="font-mono text-[9px] tracking-widest font-normal text-[var(--muted-foreground)] ml-1">IMS</span>
+      <header className="md:hidden flex items-center justify-between px-6 py-4 bg-[#12121a] border-b border-[#2a2a3a] w-full sticky top-0 z-50">
+        <h1 className="font-display font-black text-xl tracking-widest uppercase">
+          ETHARA <span className="font-mono text-[8px] tracking-wider font-bold text-[var(--accent)] ml-1">IMS</span>
         </h1>
         <button 
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 border-2 border-black hover:bg-black hover:text-white"
+          className="p-2 border border-[#2a2a3a] text-[var(--accent)] bg-[#0a0a0f] hover:bg-[var(--accent)] hover:text-black transition-colors"
         >
           {mobileMenuOpen ? <X size={16} /> : <Menu size={16} />}
         </button>
@@ -373,41 +382,41 @@ export default function App() {
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed top-[60px] left-0 w-full h-[calc(100vh-60px)] bg-white z-40 flex flex-col p-8 justify-between border-b-4 border-black">
-          <nav className="flex flex-col gap-3">
+        <div className="md:hidden fixed top-[60px] left-0 w-full h-[calc(100vh-60px)] bg-[#0d0d14] z-40 flex flex-col p-8 justify-between border-b-2 border-[var(--accent)]">
+          <nav className="flex flex-col gap-4">
             <button 
               onClick={() => navigateTo('dashboard')}
-              className="w-full text-left px-4 py-4 font-mono text-sm tracking-wider uppercase border-2 border-black hover:bg-black hover:text-white flex justify-between items-center"
+              className="w-full text-left px-4 py-4 font-mono text-xs tracking-wider uppercase border border-[#2a2a3a] text-[#8c8cbe] hover:text-[var(--accent)] hover:border-[var(--accent)] flex justify-between items-center cyber-chamfer-sm"
             >
-              <span>Dashboard</span>
-              <ChevronRight size={16} />
+              <span>[01] // DASHBOARD</span>
+              <ChevronRight size={14} />
             </button>
             <button 
               onClick={() => navigateTo('products')}
-              className="w-full text-left px-4 py-4 font-mono text-sm tracking-wider uppercase border-2 border-black hover:bg-black hover:text-white flex justify-between items-center"
+              className="w-full text-left px-4 py-4 font-mono text-xs tracking-wider uppercase border border-[#2a2a3a] text-[#8c8cbe] hover:text-[var(--accent)] hover:border-[var(--accent)] flex justify-between items-center cyber-chamfer-sm"
             >
-              <span>Products ({products.length})</span>
-              <ChevronRight size={16} />
+              <span>[02] // PRODUCTS ({products.length})</span>
+              <ChevronRight size={14} />
             </button>
             <button 
               onClick={() => navigateTo('customers')}
-              className="w-full text-left px-4 py-4 font-mono text-sm tracking-wider uppercase border-2 border-black hover:bg-black hover:text-white flex justify-between items-center"
+              className="w-full text-left px-4 py-4 font-mono text-xs tracking-wider uppercase border border-[#2a2a3a] text-[#8c8cbe] hover:text-[var(--accent)] hover:border-[var(--accent)] flex justify-between items-center cyber-chamfer-sm"
             >
-              <span>Customers ({customers.length})</span>
-              <ChevronRight size={16} />
+              <span>[03] // CUSTOMERS ({customers.length})</span>
+              <ChevronRight size={14} />
             </button>
             <button 
               onClick={() => navigateTo('orders')}
-              className="w-full text-left px-4 py-4 font-mono text-sm tracking-wider uppercase border-2 border-black hover:bg-black hover:text-white flex justify-between items-center"
+              className="w-full text-left px-4 py-4 font-mono text-xs tracking-wider uppercase border border-[#2a2a3a] text-[#8c8cbe] hover:text-[var(--accent)] hover:border-[var(--accent)] flex justify-between items-center cyber-chamfer-sm"
             >
-              <span>Orders ({orders.length})</span>
-              <ChevronRight size={16} />
+              <span>[04] // ORDERS ({orders.length})</span>
+              <ChevronRight size={14} />
             </button>
           </nav>
 
-          <div className="line-thin mb-4">
-            <p className="font-mono text-[9px] text-[var(--muted-foreground)] tracking-widest uppercase py-4">
-              ETHARA AI — MINIMALIST MONOCHROME OPERATIONAL PLATFORM
+          <div className="border-t border-[#2a2a3a] pt-4">
+            <p className="font-mono text-[8px] text-[#525280] tracking-widest uppercase">
+              ETHARA SYSTEM CONSOLE PORTABLE INTERFACE
             </p>
           </div>
         </div>
@@ -416,20 +425,20 @@ export default function App() {
       {/* Main View Container */}
       <main className="flex-1 overflow-y-auto w-full relative">
         {loading && (
-          <div className="absolute top-0 left-0 w-full h-1 bg-black animate-pulse z-[200]"></div>
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-[var(--accent)] shadow-[0_0_10px_#00ff88] animate-pulse z-[200]"></div>
         )}
 
         {/* Global Error Banner */}
         {error && (
-          <div className="bg-black text-white px-8 py-3 border-b-2 border-black font-mono text-xs uppercase tracking-wider flex items-center justify-between">
+          <div className="bg-[#ff3366] text-black px-8 py-3 border-b-2 border-black font-mono text-xs uppercase tracking-wider flex items-center justify-between font-bold">
             <span className="flex items-center gap-2">
-              <AlertTriangle size={14} /> {error}
+              <ShieldAlert size={14} /> {error}
             </span>
             <button 
               onClick={() => { setError(''); loadData(); }} 
-              className="px-3 py-1 border border-white hover:bg-white hover:text-black font-bold text-[10px]"
+              className="px-3 py-1 border border-black hover:bg-black hover:text-[#ff3366] font-black text-[10px]"
             >
-              RETRY CONNECTION
+              RETRY_HANDSHAKE()
             </button>
           </div>
         )}
@@ -437,90 +446,95 @@ export default function App() {
         {/* ================= TAB 1: DASHBOARD ================= */}
         {currentTab === 'dashboard' && (
           <div className="editorial-container">
-            {/* Massive Editorial Hero Headline */}
+            {/* High-Tech HUD Sub-Header & Blinking typing cursor intro */}
             <div className="mb-16 select-none relative">
-              <span className="font-mono text-xs uppercase tracking-[0.25em] text-[var(--muted-foreground)] block mb-2">OPERATIONAL CONTROL</span>
-              <h2 className="font-display font-bold text-7xl md:text-9xl tracking-tighter leading-[0.85] uppercase">
-                ETHARA
+              <span className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--accent)] block mb-2">// COGNITIVE STATS CONSOLE</span>
+              <h2 className="font-display font-black text-5xl md:text-7xl tracking-widest leading-none text-white select-none">
+                OVERVIEW
               </h2>
-              <div className="line-thick mt-6 mb-4 flex items-center justify-between">
-                <span className="font-mono text-xs uppercase tracking-widest py-2">[AUSTERE & AUTHORITATIVE OPERATIONS]</span>
-                {/* Hero visual punctuation: 4px heavy line with bordered box */}
-                <div className="w-4 h-4 border-2 border-black bg-white -mt-0.5 select-none"></div>
+              <div className="flex items-center justify-between border-b border-[#2a2a3a] pb-4 mt-6">
+                <span className="font-mono text-xs uppercase tracking-widest text-[#6b7280] cyber-cursor">
+                  DATAFEED SYNC STATUS: NOMINAL // TERMINAL ACTIVE
+                </span>
+                {/* Visual HUD corner decoration */}
+                <div className="w-3 h-3 border-t-2 border-r-2 border-[var(--accent)] select-none"></div>
               </div>
             </div>
 
-            {/* Inverted Stats Row with White Vertical Lines Texture */}
-            <section className="grid grid-cols-1 md:grid-cols-4 gap-0 border-2 border-black mb-16 select-none">
+            {/* Glowing Hologram Metric Grid Panels with Brackets */}
+            <section className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16 select-none">
               
-              <div className="p-8 border-b-2 md:border-b-0 md:border-r-2 border-black texture-stats-inverted hover:bg-white hover:text-black transition-all duration-100 group">
+              <div className="p-8 hologram-card cyber-chamfer hover:border-[var(--accent)] hover:shadow-[0_0_15px_rgba(0,255,136,0.2)] transition-all duration-300 group">
                 <div className="flex justify-between items-start mb-6">
-                  <span className="font-mono text-[10px] tracking-widest uppercase opacity-75 group-hover:opacity-100">01 / PRODUCTS</span>
-                  <Layers size={16} className="opacity-60" />
+                  <span className="font-mono text-[9px] tracking-widest uppercase text-[#8c8cbe] group-hover:text-[var(--accent)]">[01] SKU CATALOG</span>
+                  <Layers size={16} className="text-[var(--accent)]" />
                 </div>
-                <div className="font-display font-bold text-5xl leading-none">{products.length}</div>
-                <div className="font-mono text-[9px] tracking-wider uppercase mt-4 opacity-50 group-hover:opacity-75">Active SKUs</div>
+                <div className="font-display font-bold text-5xl leading-none text-white group-hover:text-[var(--accent)] transition-colors">{products.length}</div>
+                <div className="font-mono text-[8px] tracking-wider uppercase mt-4 text-[#525280]">ACTIVE DATASETS</div>
               </div>
 
-              <div className="p-8 border-b-2 md:border-b-0 md:border-r-2 border-black texture-stats-inverted hover:bg-white hover:text-black transition-all duration-100 group">
+              <div className="p-8 hologram-card cyber-chamfer hover:border-[var(--accent)] hover:shadow-[0_0_15px_rgba(0,255,136,0.2)] transition-all duration-300 group">
                 <div className="flex justify-between items-start mb-6">
-                  <span className="font-mono text-[10px] tracking-widest uppercase opacity-75 group-hover:opacity-100">02 / CUSTOMERS</span>
-                  <Users size={16} className="opacity-60" />
+                  <span className="font-mono text-[9px] tracking-widest uppercase text-[#8c8cbe] group-hover:text-[var(--accent)]">[02] CLIENT NODES</span>
+                  <Users size={16} className="text-[var(--accent)]" />
                 </div>
-                <div className="font-display font-bold text-5xl leading-none">{customers.length}</div>
-                <div className="font-mono text-[9px] tracking-wider uppercase mt-4 opacity-50 group-hover:opacity-75">Registered Clients</div>
+                <div className="font-display font-bold text-5xl leading-none text-white group-hover:text-[var(--accent)] transition-colors">{customers.length}</div>
+                <div className="font-mono text-[8px] tracking-wider uppercase mt-4 text-[#525280]">REGISTERED ENTITIES</div>
               </div>
 
-              <div className="p-8 border-b-2 md:border-b-0 md:border-r-2 border-black texture-stats-inverted hover:bg-white hover:text-black transition-all duration-100 group">
+              <div className="p-8 hologram-card cyber-chamfer hover:border-[var(--accent)] hover:shadow-[0_0_15px_rgba(0,255,136,0.2)] transition-all duration-300 group">
                 <div className="flex justify-between items-start mb-6">
-                  <span className="font-mono text-[10px] tracking-widest uppercase opacity-75 group-hover:opacity-100">03 / ORDERS</span>
-                  <ShoppingBag size={16} className="opacity-60" />
+                  <span className="font-mono text-[9px] tracking-widest uppercase text-[#8c8cbe] group-hover:text-[var(--accent)]">[03] SALES MATRIX</span>
+                  <ShoppingBag size={16} className="text-[var(--accent)]" />
                 </div>
-                <div className="font-display font-bold text-5xl leading-none">{orders.length}</div>
-                <div className="font-mono text-[9px] tracking-wider uppercase mt-4 opacity-50 group-hover:opacity-75">Sales Transactions</div>
+                <div className="font-display font-bold text-5xl leading-none text-white group-hover:text-[var(--accent)] transition-colors">{orders.length}</div>
+                <div className="font-mono text-[8px] tracking-wider uppercase mt-4 text-[#525280]">TRANSACTION BLOCKS</div>
               </div>
 
-              <div className="p-8 texture-stats-inverted hover:bg-white hover:text-black transition-all duration-100 group">
+              <div className="p-8 hologram-card cyber-chamfer hover:border-[var(--accent-secondary)] hover:shadow-[0_0_15px_rgba(255,0,255,0.2)] border-rgba(255,0,255,0.2) transition-all duration-300 group">
+                {/* glowing secondary box corner tags */}
+                <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-[var(--accent-secondary)]"></div>
+                <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-[var(--accent-secondary)]"></div>
                 <div className="flex justify-between items-start mb-6">
-                  <span className="font-mono text-[10px] tracking-widest uppercase opacity-75 group-hover:opacity-100">04 / ALERTS</span>
-                  <AlertTriangle size={16} className="opacity-60" />
+                  <span className="font-mono text-[9px] tracking-widest uppercase text-[#8c8cbe] group-hover:text-[var(--accent-secondary)]">[04] STOCK CRISES</span>
+                  <AlertTriangle size={16} className="text-[var(--accent-secondary)]" />
                 </div>
-                <div className="font-display font-bold text-5xl leading-none">
+                <div className="font-display font-bold text-5xl leading-none text-white group-hover:text-[var(--accent-secondary)] transition-colors">
                   {lowStockProductsCount}
                 </div>
-                <div className="font-mono text-[9px] tracking-wider uppercase mt-4 opacity-50 group-hover:opacity-75">Low Stock Threshold</div>
+                <div className="font-mono text-[8px] tracking-wider uppercase mt-4 text-[#525280]">SKU DEPLETION WARNINGS</div>
               </div>
 
             </section>
 
-            {/* Dashboard Analytics Representation & Quick Actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            {/* Layout strategy Grid trace section */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               
-              {/* Analytics Section */}
-              <div className="lg:col-span-8 border-2 border-black p-8 texture-grid relative">
-                <h3 className="font-display font-bold text-xl uppercase mb-6 tracking-tight flex items-center justify-between">
-                  <span>METRIC VELOCITY</span>
-                  <TrendingUp size={16} />
+              {/* Electric Green matrix Velocity graph */}
+              <div className="lg:col-span-8 hologram-card p-8 cyber-chamfer relative overflow-hidden">
+                {/* Glowing neon green grids */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[rgba(0,255,136,0.01)] to-transparent pointer-events-none"></div>
+                <h3 className="font-display font-bold text-lg uppercase mb-6 tracking-wider flex items-center justify-between text-white">
+                  <span>METRIC VELOCITY DIAGRAM</span>
+                  <TrendingUp size={16} className="text-[var(--accent)]" />
                 </h3>
                 
-                {/* CSS Grid-Based Monochrome Bar Chart */}
-                <div className="h-64 flex items-end justify-between gap-4 border-b-2 border-black pt-8 px-4">
-                  {products.slice(0, 6).map((prod, i) => {
-                    // compute relative height
+                {/* Dynamic neon charts */}
+                <div className="h-64 flex items-end justify-between gap-4 border-b border-[#2a2a3a] pt-8 px-4">
+                  {products.slice(0, 8).map((prod, i) => {
                     const maxQty = Math.max(...products.map(p => p.quantity_in_stock), 1);
                     const pct = Math.max((prod.quantity_in_stock / maxQty) * 100, 4);
                     return (
                       <div key={prod.id} className="flex flex-col items-center flex-1 group">
-                        {/* Hover quantity display */}
-                        <span className="font-mono text-[10px] opacity-0 group-hover:opacity-100 mb-1 transition-opacity duration-100 select-none">
+                        <span className="font-mono text-[9px] text-[var(--accent)] opacity-0 group-hover:opacity-100 mb-1 transition-opacity duration-150 select-none">
                           {prod.quantity_in_stock}
                         </span>
-                        {/* Monochrome dynamic bar */}
+                        {/* Glow and height transition */}
                         <div 
-                          className="w-full bg-black hover:bg-[var(--muted-foreground)] cursor-pointer"
-                          style={{ height: `${pct * 1.5}px`, transition: 'height 200ms ease' }}
+                          className="w-full bg-[var(--accent)] opacity-70 group-hover:opacity-100 cursor-pointer shadow-[0_0_8px_rgba(0,255,136,0.4)]"
+                          style={{ height: `${pct * 1.5}px`, transition: 'all 200ms ease' }}
                         ></div>
-                        <span className="font-mono text-[9px] tracking-tight uppercase truncate w-full text-center mt-2">
+                        <span className="font-mono text-[8px] tracking-widest uppercase truncate w-full text-center mt-2 text-[#525280] group-hover:text-white">
                           {prod.sku}
                         </span>
                       </div>
@@ -528,21 +542,21 @@ export default function App() {
                   })}
                 </div>
                 <div className="flex justify-between items-center mt-4">
-                  <p className="font-mono text-[10px] text-[var(--muted-foreground)] uppercase">
-                    BARS REPRESENT INVENTORY QUANTITY PER PRODUCT SKU
+                  <p className="font-mono text-[8px] text-[#525280] uppercase">
+                    NEON HISTOGRAM QUANTIFYING COGNITIVE DATASET VELOCITIES
                   </p>
                   <button onClick={() => navigateTo('products')} className="btn-ghost">
-                    VIEW ALL PRODUCTS <ChevronRight size={12} />
+                    EXPAND INVENTORY // <ChevronRight size={12} />
                   </button>
                 </div>
               </div>
 
-              {/* Quick Operations Panel */}
-              <div className="lg:col-span-4 border-2 border-black p-8 flex flex-col justify-between">
+              {/* Terminal panel quick actions */}
+              <div className="lg:col-span-4 hologram-card p-8 flex flex-col justify-between cyber-chamfer">
                 <div>
-                  <h3 className="font-display font-bold text-xl uppercase mb-6 tracking-tight">OPERATIONS</h3>
-                  <p className="font-body text-sm text-[var(--muted-foreground)] mb-6">
-                    Immediate database registration and transactional execution triggers:
+                  <h3 className="font-display font-bold text-lg uppercase mb-6 tracking-wider text-white">SYS_COMMAND_PROMPTS</h3>
+                  <p className="font-body text-xs text-[#8c8cbe] mb-6">
+                    Launch immediate database injection and transaction executions below:
                   </p>
 
                   <div className="flex flex-col gap-3">
@@ -550,33 +564,33 @@ export default function App() {
                       onClick={() => navigateTo('orders')}
                       className="btn-primary w-full justify-between"
                     >
-                      <span>GENERATE NEW ORDER</span>
-                      <Plus size={16} />
+                      <span>GENERATE ORDER TRANSACTION</span>
+                      <Plus size={14} />
                     </button>
                     
                     <button 
                       onClick={() => navigateTo('products')}
                       className="btn-secondary w-full justify-between"
                     >
-                      <span>REGISTER NEW SKU</span>
-                      <Plus size={16} />
+                      <span>INJECT NEW PRODUCT SKU</span>
+                      <Plus size={14} />
                     </button>
 
                     <button 
                       onClick={() => navigateTo('customers')}
-                      className="btn-secondary w-full justify-between"
+                      className="btn-ghost w-full justify-between hover:text-[var(--accent-tertiary)] hover:border-[var(--accent-tertiary)]"
                     >
-                      <span>REGISTER CUSTOMER</span>
-                      <Plus size={16} />
+                      <span>REGISTER CUSTOMER NODE</span>
+                      <Plus size={14} />
                     </button>
                   </div>
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-black">
-                  <span className="font-mono text-[10px] uppercase text-[var(--muted-foreground)] block mb-1">SYSTEM STATUS</span>
+                <div className="mt-8 pt-6 border-t border-[#2a2a3a]">
+                  <span className="font-mono text-[9px] uppercase text-[#525280] block mb-1">DATASTREAM ENCRYPTION</span>
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 border border-black bg-black select-none"></span>
-                    <span className="font-mono text-[10px] uppercase tracking-wider font-bold">ONLINE & AUTHENTICATED</span>
+                    <span className="w-2 h-2 bg-[var(--accent)] animate-ping rounded-none select-none"></span>
+                    <span className="font-mono text-[9px] uppercase tracking-wider font-bold text-[var(--accent)]">ONLINE // SECURED FEED</span>
                   </div>
                 </div>
 
@@ -584,23 +598,23 @@ export default function App() {
 
             </div>
 
-            {/* Editorial Pull Quote Boxed Drop Cap (From Success Criteria) */}
-            <div className="line-thick my-16"></div>
+            {/* Cyber terminal decorative block */}
+            <div className="border-t border-[#2a2a3a] my-16"></div>
 
             <section className="grid grid-cols-1 md:grid-cols-2 gap-12 select-none">
               <div>
-                <p className="font-body text-lg leading-relaxed boxed-dropcap text-[var(--foreground)]">
-                  The essence of high-performance design resides in absolute constraints. 
-                  By stripping away color, softness, and shadows, this operations control interface forces focus onto SKU velocities, customer relationships, and transaction safety. The stark typography communicates raw mathematical data with luxury elegance.
+                <p className="font-body text-xs leading-relaxed text-[#8c8cbe]">
+                  <span className="text-[var(--accent)] font-bold font-mono block mb-2">[CRIT_ESTIMATES]</span>
+                  Ethara Systems represents the pinnacle of operational security and high-tech inventory execution. 
+                  By utilizing secure transaction blocks, real-time overdraw locking parameters, and fully cascading schema purges, your logistics datalink remains safe from concurrency threats. System speeds are calibrated at high-velocity rates.
                 </p>
               </div>
-              <div className="border-l-4 border-black pl-8 py-2 flex flex-col justify-between">
-                {/* Large Italic Serif Pull Quote */}
-                <blockquote className="font-display italic text-2xl leading-normal text-[var(--muted-foreground)]">
-                  "Simplicity is not the avoidance of clutter, but the absolute reduction of an object to its core purpose. Discipline is beauty."
+              <div className="border-l border-[var(--accent-secondary)] pl-8 py-2 flex flex-col justify-between">
+                <blockquote className="font-mono text-sm leading-normal text-[var(--accent-secondary)] text-shadow-sm italic">
+                  "THE SPILL FLICKERS UNDER CORRUPTED SKY. SYSTEMS DECAY, BUT THE DATASTREAM REMAINS PURE."
                 </blockquote>
-                <cite className="font-mono text-[10px] tracking-widest uppercase block mt-4 font-bold not-italic">
-                  — EDITORIAL MANIFESTO, ETHARA AI
+                <cite className="font-mono text-[9px] tracking-[0.2em] uppercase block mt-4 font-bold not-italic text-[#6b7280]">
+                  // CORE_ENG_LOG_BLOCK40
                 </cite>
               </div>
             </section>
@@ -613,134 +627,142 @@ export default function App() {
           <div className="editorial-container">
             {/* Header */}
             <div className="mb-12">
-              <span className="font-mono text-xs uppercase tracking-widest text-[var(--muted-foreground)]">[CATALOG CONTROLS]</span>
-              <h2 className="font-display font-bold text-5xl uppercase tracking-tight mt-1">INVENTORY CATALOG</h2>
-              <div className="line-thick mt-4"></div>
+              <span className="font-mono text-xs uppercase tracking-widest text-[var(--accent)]">[SYSTEM_MODULE: INVENTORY_DB]</span>
+              <h2 className="font-display font-black text-4xl uppercase tracking-wider text-white mt-1">PRODUCT CATALOG</h2>
+              <div className="h-[1px] bg-[#2a2a3a] mt-4"></div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
               
-              {/* Product Registration Form */}
-              <div className="lg:col-span-4 border-2 border-black p-8 h-fit">
-                <h3 className="font-display font-bold text-xl uppercase mb-6 tracking-tight">
-                  {editProduct ? 'EDIT SKU DETAILS' : 'REGISTER NEW SKU'}
+              {/* Product input console */}
+              <div className="lg:col-span-4 hologram-card p-8 h-fit cyber-chamfer">
+                <h3 className="font-display font-bold text-lg uppercase mb-6 tracking-wide text-white">
+                  {editProduct ? '// UPDATE_PRODUCT_DATA' : '// INJECT_NEW_PRODUCT'}
                 </h3>
                 
                 <form onSubmit={editProduct ? handleProductUpdate : handleProductCreate} className="flex flex-col gap-6">
                   <div>
-                    <label className="form-label">Product Name</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. Bauhaus Armchair" 
-                      className="input-field"
-                      value={editProduct ? editProduct.name : productForm.name}
-                      onChange={(e) => editProduct 
-                        ? setEditProduct({ ...editProduct, name: e.target.value })
-                        : setProductForm({ ...productForm, name: e.target.value })
-                      }
-                      required
-                    />
+                    <label className="form-label">PRODUCT_LABEL</label>
+                    <div className="input-wrapper cyber-chamfer-sm">
+                      <input 
+                        type="text" 
+                        placeholder="e.g. StarkDesk Lamp" 
+                        className="input-field"
+                        value={editProduct ? editProduct.name : productForm.name}
+                        onChange={(e) => editProduct 
+                          ? setEditProduct({ ...editProduct, name: e.target.value })
+                          : setProductForm({ ...productForm, name: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="form-label">SKU Identifier (Unique)</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. FURN-001" 
-                      className="input-field font-mono uppercase"
-                      value={editProduct ? editProduct.sku : productForm.sku}
-                      onChange={(e) => editProduct 
-                        ? setEditProduct({ ...editProduct, sku: e.target.value.toUpperCase() })
-                        : setProductForm({ ...productForm, sku: e.target.value.toUpperCase() })
-                      }
-                      required
-                    />
+                    <label className="form-label">SKU_IDENTIFIER</label>
+                    <div className="input-wrapper cyber-chamfer-sm">
+                      <input 
+                        type="text" 
+                        placeholder="e.g. LIGHT-003" 
+                        className="input-field uppercase font-mono"
+                        value={editProduct ? editProduct.sku : productForm.sku}
+                        onChange={(e) => editProduct 
+                          ? setEditProduct({ ...editProduct, sku: e.target.value.toUpperCase() })
+                          : setProductForm({ ...productForm, sku: e.target.value.toUpperCase() })
+                        }
+                        required
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="form-label">Price ($ USD)</label>
-                      <input 
-                        type="number" 
-                        step="0.01" 
-                        min="0.01" 
-                        placeholder="850.00" 
-                        className="input-field"
-                        value={editProduct ? editProduct.price : productForm.price}
-                        onChange={(e) => editProduct 
-                          ? setEditProduct({ ...editProduct, price: e.target.value })
-                          : setProductForm({ ...productForm, price: e.target.value })
-                        }
-                        required
-                      />
+                      <label className="form-label">VAL_PRICE</label>
+                      <div className="input-wrapper cyber-chamfer-sm">
+                        <input 
+                          type="number" 
+                          step="0.01" 
+                          min="0.01" 
+                          placeholder="180.00" 
+                          className="input-field font-mono"
+                          value={editProduct ? editProduct.price : productForm.price}
+                          onChange={(e) => editProduct 
+                            ? setEditProduct({ ...editProduct, price: e.target.value })
+                            : setProductForm({ ...productForm, price: e.target.value })
+                          }
+                          required
+                        />
+                      </div>
                     </div>
                     <div>
-                      <label className="form-label">Stock Quantity</label>
-                      <input 
-                        type="number" 
-                        min="0" 
-                        placeholder="12" 
-                        className="input-field"
-                        value={editProduct ? editProduct.quantity_in_stock : productForm.quantity_in_stock}
-                        onChange={(e) => editProduct 
-                          ? setEditProduct({ ...editProduct, quantity_in_stock: e.target.value })
-                          : setProductForm({ ...productForm, quantity_in_stock: e.target.value })
-                        }
-                        required
-                      />
+                      <label className="form-label">QTY_STOCK</label>
+                      <div className="input-wrapper cyber-chamfer-sm">
+                        <input 
+                          type="number" 
+                          min="0" 
+                          placeholder="4" 
+                          className="input-field font-mono"
+                          value={editProduct ? editProduct.quantity_in_stock : productForm.quantity_in_stock}
+                          onChange={(e) => editProduct 
+                            ? setEditProduct({ ...editProduct, quantity_in_stock: e.target.value })
+                            : setProductForm({ ...productForm, quantity_in_stock: e.target.value })
+                          }
+                          required
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex gap-3 mt-4">
-                    <button type="submit" className="btn-primary flex-1 justify-center">
-                      {editProduct ? 'UPDATE SKU' : 'COMMIT REGISTRATION'}
+                  <div className="flex flex-col gap-3 mt-4">
+                    <button type="submit" className="btn-primary w-full justify-center">
+                      {editProduct ? 'PATCH SKU BLOCK' : 'COMMIT SKU INJECTION'}
                     </button>
                     {editProduct && (
                       <button 
                         type="button" 
                         onClick={() => setEditProduct(null)} 
-                        className="btn-secondary"
+                        className="btn-secondary w-full justify-center"
                       >
-                        CANCEL
+                        ABORT PATCH
                       </button>
                     )}
                   </div>
                 </form>
               </div>
 
-              {/* Product Listing Catalog */}
+              {/* Product catalog terminal listing */}
               <div className="lg:col-span-8">
                 
-                {/* Search and Filters */}
+                {/* Search */}
                 <div className="mb-6 flex gap-4">
-                  <div className="relative flex-1">
+                  <div className="input-wrapper cyber-chamfer-sm flex-1">
                     <input 
                       type="text" 
-                      placeholder="SEARCH BY SKU OR PRODUCT NAME..." 
-                      className="input-field uppercase font-mono text-xs tracking-wider"
+                      placeholder="FILTER BY SKU OR PRODUCT_LABEL..." 
+                      className="input-field uppercase font-mono text-xs tracking-widest text-[var(--accent)]"
                       value={productSearch}
                       onChange={(e) => setProductSearch(e.target.value)}
                     />
                   </div>
                 </div>
 
-                {/* Table */}
-                <div className="border-2 border-black overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+                {/* Cyberpunk high-glow table */}
+                <div className="border border-[#2a2a3a] hologram-card cyber-chamfer overflow-hidden">
+                  <table className="w-full text-left border-collapse font-mono text-xs">
                     <thead>
-                      <tr className="bg-black text-white font-mono text-xs uppercase tracking-widest">
-                        <th className="py-4 px-6 font-medium">SKU</th>
-                        <th className="py-4 px-6 font-medium">PRODUCT</th>
-                        <th className="py-4 px-6 font-medium text-right">PRICE</th>
-                        <th className="py-4 px-6 font-medium text-right">STOCK</th>
-                        <th className="py-4 px-6 font-medium text-center">ACTION</th>
+                      <tr className="bg-[#12121a] text-[var(--accent)] uppercase tracking-widest border-b border-[#2a2a3a]">
+                        <th className="py-4 px-6 font-bold">SKU</th>
+                        <th className="py-4 px-6 font-bold">LABEL</th>
+                        <th className="py-4 px-6 font-bold text-right">VAL_PRICE</th>
+                        <th className="py-4 px-6 font-bold text-right">QUANTITY</th>
+                        <th className="py-4 px-6 font-bold text-center">COMMAND</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-black font-body text-sm">
+                    <tbody className="divide-y divide-[#2a2a3a] text-[#c0c0d8]">
                       {filteredProducts.length === 0 ? (
                         <tr>
-                          <td colSpan="5" className="py-8 text-center font-mono text-xs text-[var(--muted-foreground)] uppercase">
-                            NO REGISTERED PRODUCTS MATCHING SEARCH
+                          <td colSpan="5" className="py-8 text-center text-[#525280] uppercase tracking-widest">
+                            ERROR: NO SKU MATCHES RETURNED BY QUERY
                           </td>
                         </tr>
                       ) : (
@@ -749,45 +771,45 @@ export default function App() {
                           const isOutOfStock = p.quantity_in_stock === 0;
 
                           return (
-                            <tr key={p.id} className="hover:bg-[var(--muted)] transition-colors duration-100">
-                              <td className="py-4 px-6 font-mono text-xs font-bold tracking-wider">{p.sku}</td>
+                            <tr key={p.id} className="hover:bg-[rgba(0,255,136,0.02)] transition-colors duration-150">
+                              <td className="py-4 px-6 font-bold text-[var(--accent-tertiary)]">{p.sku}</td>
                               <td className="py-4 px-6">
-                                <span className="font-display font-bold block">{p.name}</span>
-                                <span className="font-mono text-[9px] text-[var(--muted-foreground)] block">
-                                  UPDATED: {new Date(p.updated_at).toLocaleString()}
+                                <span className="font-display font-bold block text-white">{p.name}</span>
+                                <span className="text-[8px] text-[#525280] block">
+                                  LAST_PATCH: {new Date(p.updated_at).toLocaleString()}
                                 </span>
                               </td>
-                              <td className="py-4 px-6 text-right font-mono font-bold">${p.price.toFixed(2)}</td>
+                              <td className="py-4 px-6 text-right font-bold text-[#fff]">${p.price.toFixed(2)}</td>
                               <td className="py-4 px-6 text-right">
                                 <div className="flex flex-col items-end gap-1">
-                                  <span className="font-mono font-bold">{p.quantity_in_stock}</span>
+                                  <span className="font-bold text-[#fff]">{p.quantity_in_stock}</span>
                                   {isLowStock && (
-                                    <span className="border border-black px-2 py-0.5 font-mono text-[8px] font-bold italic tracking-wider uppercase text-black">
-                                      [LOW STOCK]
+                                    <span className="border border-[var(--accent-secondary)] px-2 py-0.5 text-[8px] font-bold tracking-widest uppercase text-[var(--accent-secondary)] shadow-[0_0_5px_rgba(255,0,255,0.3)]">
+                                      [LOW_STOCK]
                                     </span>
                                   )}
                                   {isOutOfStock && (
-                                    <span className="bg-black text-white px-2 py-0.5 font-mono text-[8px] font-bold tracking-wider uppercase">
-                                      [OUT OF STOCK]
+                                    <span className="bg-[#ff3366] text-black font-bold px-2 py-0.5 text-[8px] tracking-widest uppercase shadow-[0_0_5px_rgba(255,51,102,0.3)]">
+                                      [DEPLETED]
                                     </span>
                                   )}
                                 </div>
                               </td>
-                              <td className="py-4 px-6 text-center">
+                              <td className="py-4 px-6">
                                 <div className="flex gap-2 justify-center">
                                   <button 
                                     onClick={() => setEditProduct(p)} 
-                                    className="p-2 border border-black hover:bg-black hover:text-white transition-colors duration-100"
+                                    className="p-2 border border-[#2a2a3a] text-[var(--accent)] hover:border-[var(--accent)] hover:shadow-neon transition-all"
                                     title="Edit Product"
                                   >
-                                    <Edit3 size={14} />
+                                    <Edit3 size={12} />
                                   </button>
                                   <button 
                                     onClick={() => setDeleteConfirm({ show: true, type: 'product', id: p.id })} 
-                                    className="p-2 border border-black hover:bg-black hover:text-white transition-colors duration-100"
+                                    className="p-2 border border-[#2a2a3a] text-[#ff3366] hover:border-[#ff3366] hover:shadow-[0_0_6px_rgba(255,51,102,0.4)] transition-all"
                                     title="Delete Product"
                                   >
-                                    <Trash2 size={14} />
+                                    <Trash2 size={12} />
                                   </button>
                                 </div>
                               </td>
@@ -811,109 +833,117 @@ export default function App() {
           <div className="editorial-container">
             {/* Header */}
             <div className="mb-12">
-              <span className="font-mono text-xs uppercase tracking-widest text-[var(--muted-foreground)]">[RELATION DATABASE]</span>
-              <h2 className="font-display font-bold text-5xl uppercase tracking-tight mt-1">CUSTOMER CLIENTS</h2>
-              <div className="line-thick mt-4"></div>
+              <span className="font-mono text-xs uppercase tracking-widest text-[var(--accent)]">[SYSTEM_MODULE: CLIENT_NODES]</span>
+              <h2 className="font-display font-black text-4xl uppercase tracking-wider text-white mt-1">CLIENT ARCHIVE</h2>
+              <div className="h-[1px] bg-[#2a2a3a] mt-4"></div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
               
-              {/* Customer Registration Form */}
-              <div className="lg:col-span-4 border-2 border-black p-8 h-fit">
-                <h3 className="font-display font-bold text-xl uppercase mb-6 tracking-tight">REGISTER CUSTOMER</h3>
+              {/* Customer inputs */}
+              <div className="lg:col-span-4 hologram-card p-8 h-fit cyber-chamfer">
+                <h3 className="font-display font-bold text-lg uppercase mb-6 tracking-wide text-white">// INJECT_CLIENT_NODE</h3>
                 
                 <form onSubmit={handleCustomerCreate} className="flex flex-col gap-6">
                   <div>
-                    <label className="form-label">Full Name</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. Dieter Rams" 
-                      className="input-field"
-                      value={customerForm.full_name}
-                      onChange={(e) => setCustomerForm({ ...customerForm, full_name: e.target.value })}
-                      required
-                    />
+                    <label className="form-label">CLIENT_FULLNAME</label>
+                    <div className="input-wrapper cyber-chamfer-sm">
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Charlotte Perriand" 
+                        className="input-field"
+                        value={customerForm.full_name}
+                        onChange={(e) => setCustomerForm({ ...customerForm, full_name: e.target.value })}
+                        required
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="form-label">Email Address (Unique)</label>
-                    <input 
-                      type="email" 
-                      placeholder="e.g. dieter@vitsoe.com" 
-                      className="input-field"
-                      value={customerForm.email}
-                      onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
-                      required
-                    />
+                    <label className="form-label">CLIENT_EMAIL</label>
+                    <div className="input-wrapper cyber-chamfer-sm">
+                      <input 
+                        type="email" 
+                        placeholder="e.g. charlotte@cassina.fr" 
+                        className="input-field"
+                        value={customerForm.email}
+                        onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
+                        required
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="form-label">Phone Number (Optional)</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. +49 171 1234567" 
-                      className="input-field font-mono"
-                      value={customerForm.phone_number}
-                      onChange={(e) => setCustomerForm({ ...customerForm, phone_number: e.target.value })}
-                    />
+                    <label className="form-label">VAL_PHONE_NUMBER</label>
+                    <div className="input-wrapper cyber-chamfer-sm">
+                      <input 
+                        type="text" 
+                        placeholder="e.g. +33 6 12345678" 
+                        className="input-field font-mono"
+                        value={customerForm.phone_number}
+                        onChange={(e) => setCustomerForm({ ...customerForm, phone_number: e.target.value })}
+                      />
+                    </div>
                   </div>
 
                   <button type="submit" className="btn-primary w-full justify-center mt-4">
-                    COMMIT CUSTOMER RECORD
+                    COMMIT CLIENT NODE
                   </button>
                 </form>
               </div>
 
-              {/* Customer Listing */}
+              {/* Customer table */}
               <div className="lg:col-span-8">
                 
                 {/* Search */}
                 <div className="mb-6">
-                  <input 
-                    type="text" 
-                    placeholder="SEARCH BY CLIENT NAME OR EMAIL ADDRESS..." 
-                    className="input-field uppercase font-mono text-xs tracking-wider"
-                    value={customerSearch}
-                    onChange={(e) => setCustomerSearch(e.target.value)}
-                  />
+                  <div className="input-wrapper cyber-chamfer-sm">
+                    <input 
+                      type="text" 
+                      placeholder="FILTER BY CLIENT NAME OR REGISTERED_EMAIL..." 
+                      className="input-field uppercase font-mono text-xs tracking-widest text-[var(--accent)]"
+                      value={customerSearch}
+                      onChange={(e) => setCustomerSearch(e.target.value)}
+                    />
+                  </div>
                 </div>
 
                 {/* Table */}
-                <div className="border-2 border-black overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+                <div className="border border-[#2a2a3a] hologram-card cyber-chamfer overflow-hidden">
+                  <table className="w-full text-left border-collapse font-mono text-xs">
                     <thead>
-                      <tr className="bg-black text-white font-mono text-xs uppercase tracking-widest">
-                        <th className="py-4 px-6 font-medium">NAME</th>
-                        <th className="py-4 px-6 font-medium">EMAIL</th>
-                        <th className="py-4 px-6 font-medium">PHONE</th>
-                        <th className="py-4 px-6 font-medium text-center">ACTION</th>
+                      <tr className="bg-[#12121a] text-[var(--accent)] uppercase tracking-widest border-b border-[#2a2a3a]">
+                        <th className="py-4 px-6 font-bold">CLIENT NAME</th>
+                        <th className="py-4 px-6 font-bold">DATALINK_EMAIL</th>
+                        <th className="py-4 px-6 font-bold">COMMS_PHONE</th>
+                        <th className="py-4 px-6 font-bold text-center">PURGE</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-black font-body text-sm">
+                    <tbody className="divide-y divide-[#2a2a3a] text-[#c0c0d8]">
                       {filteredCustomers.length === 0 ? (
                         <tr>
-                          <td colSpan="4" className="py-8 text-center font-mono text-xs text-[var(--muted-foreground)] uppercase">
-                            NO CUSTOMERS REGISTRATIONS FOUND
+                          <td colSpan="4" className="py-8 text-center text-[#525280] uppercase tracking-widest">
+                            ERROR: DATAFEED RETURNED ZERO CLIENT STACKS
                           </td>
                         </tr>
                       ) : (
                         filteredCustomers.map((c) => (
-                          <tr key={c.id} className="hover:bg-[var(--muted)] transition-colors duration-100">
+                          <tr key={c.id} className="hover:bg-[rgba(0,255,136,0.02)] transition-colors duration-150">
                             <td className="py-4 px-6">
-                              <span className="font-display font-bold block">{c.full_name}</span>
-                              <span className="font-mono text-[9px] text-[var(--muted-foreground)] block">
-                                REGISTERED: {new Date(c.created_at).toLocaleDateString()}
+                              <span className="font-display font-bold block text-white">{c.full_name}</span>
+                              <span className="text-[8px] text-[#525280] block">
+                                REGISTER_STAMP: {new Date(c.created_at).toLocaleDateString()}
                               </span>
                             </td>
-                            <td className="py-4 px-6 font-mono text-xs">{c.email}</td>
-                            <td className="py-4 px-6 font-mono text-xs">{c.phone_number || '—'}</td>
+                            <td className="py-4 px-6 font-semibold text-[var(--accent-tertiary)]">{c.email}</td>
+                            <td className="py-4 px-6 text-[#fff]">{c.phone_number || '—'}</td>
                             <td className="py-4 px-6 text-center">
                               <button 
                                 onClick={() => setDeleteConfirm({ show: true, type: 'customer', id: c.id })} 
-                                className="p-2 border border-black hover:bg-black hover:text-white transition-colors duration-100"
-                                title="Delete Customer"
+                                className="p-2 border border-[#2a2a3a] text-[#ff3366] hover:border-[#ff3366] hover:shadow-[0_0_6px_rgba(255,51,102,0.4)] transition-all"
+                                title="Purge Customer Record"
                               >
-                                <Trash2 size={14} />
+                                <Trash2 size={12} />
                               </button>
                             </td>
                           </tr>
@@ -935,101 +965,107 @@ export default function App() {
           <div className="editorial-container">
             {/* Header */}
             <div className="mb-12">
-              <span className="font-mono text-xs uppercase tracking-widest text-[var(--muted-foreground)]">[TRANSACTORS]</span>
-              <h2 className="font-display font-bold text-5xl uppercase tracking-tight mt-1">SALES ORDERS</h2>
-              <div className="line-thick mt-4"></div>
+              <span className="font-mono text-xs uppercase tracking-widest text-[var(--accent)]">[SYSTEM_MODULE: SALES_BLOCS]</span>
+              <h2 className="font-display font-black text-4xl uppercase tracking-wider text-white mt-1">TRANSACT REGISTRY</h2>
+              <div className="h-[1px] bg-[#2a2a3a] mt-4"></div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
               
-              {/* Generate New Order Panel */}
-              <div className="lg:col-span-5 border-2 border-black p-8 h-fit">
-                <h3 className="font-display font-bold text-xl uppercase mb-6 tracking-tight">GENERATE ORDER</h3>
+              {/* Order form console */}
+              <div className="lg:col-span-5 hologram-card p-8 h-fit cyber-chamfer">
+                <h3 className="font-display font-bold text-lg uppercase mb-6 tracking-wide text-white">// COMPILE_TRANSACT_ORDER</h3>
                 
                 <form onSubmit={handleOrderCreate} className="flex flex-col gap-6">
                   {/* Select Customer */}
                   <div>
-                    <label className="form-label">Client Customer</label>
-                    <select 
-                      className="input-field font-display font-bold text-sm bg-white"
-                      value={orderForm.customer_id}
-                      onChange={(e) => setOrderForm({ ...orderForm, customer_id: e.target.value })}
-                      required
-                    >
-                      <option value="">SELECT REGISTERED CUSTOMER...</option>
-                      {customers.map(c => (
-                        <option key={c.id} value={c.id}>{c.full_name} ({c.email})</option>
-                      ))}
-                    </select>
+                    <label className="form-label">TARGET_CLIENT_NODE</label>
+                    <div className="input-wrapper cyber-chamfer-sm">
+                      <select 
+                        className="input-field font-mono font-bold text-xs bg-[#12121a] text-white focus:outline-none"
+                        value={orderForm.customer_id}
+                        onChange={(e) => setOrderForm({ ...orderForm, customer_id: e.target.value })}
+                        required
+                      >
+                        <option value="">SELECT TARGET DECODER...</option>
+                        {customers.map(c => (
+                          <option key={c.id} value={c.id} className="bg-[#12121a]">{c.full_name} ({c.email})</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
-                  <div className="line-thin my-2"></div>
+                  <div className="h-[1px] bg-[#2a2a3a] my-2"></div>
 
-                  {/* Add Order Item segment */}
+                  {/* Add Order Item */}
                   <div>
-                    <h4 className="font-mono text-xs uppercase tracking-wider font-bold mb-4">[ADD ORDER ITEM]</h4>
+                    <h4 className="font-mono text-xs uppercase tracking-wider font-bold mb-4 text-[var(--accent-secondary)]">[ADD SKU TO TRANSACT]</h4>
                     
                     <div className="flex flex-col gap-4">
                       <div>
-                        <label className="form-label">Product Item</label>
-                        <select 
-                          className="input-field font-mono text-xs bg-white"
-                          value={newOrderItem.product_id}
-                          onChange={(e) => setNewOrderItem({ ...newOrderItem, product_id: e.target.value })}
-                        >
-                          <option value="">SELECT PRODUCT SKU...</option>
-                          {products.map(p => (
-                            <option key={p.id} value={p.id} disabled={p.quantity_in_stock === 0}>
-                              {p.sku} — {p.name} (${p.price.toFixed(2)}) [STOCK: {p.quantity_in_stock}]
-                            </option>
-                          ))}
-                        </select>
+                        <label className="form-label">INVENTORY_SKU</label>
+                        <div className="input-wrapper cyber-chamfer-sm">
+                          <select 
+                            className="input-field font-mono text-xs bg-[#12121a] text-white focus:outline-none"
+                            value={newOrderItem.product_id}
+                            onChange={(e) => setNewOrderItem({ ...newOrderItem, product_id: e.target.value })}
+                          >
+                            <option value="">SELECT SOURCE CODE...</option>
+                            {products.map(p => (
+                              <option key={p.id} value={p.id} disabled={p.quantity_in_stock === 0} className="bg-[#12121a]">
+                                {p.sku} // {p.name} (${p.price.toFixed(2)}) [QTY: {p.quantity_in_stock}]
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
 
                       <div className="flex gap-4 items-end">
                         <div className="flex-1">
-                          <label className="form-label">Purchase Quantity</label>
-                          <input 
-                            type="number" 
-                            min="1" 
-                            className="input-field font-mono"
-                            value={newOrderItem.quantity}
-                            onChange={(e) => setNewOrderItem({ ...newOrderItem, quantity: parseInt(e.target.value) })}
-                          />
+                          <label className="form-label">PURCHASE_QTY</label>
+                          <div className="input-wrapper cyber-chamfer-sm">
+                            <input 
+                              type="number" 
+                              min="1" 
+                              className="input-field font-mono"
+                              value={newOrderItem.quantity}
+                              onChange={(e) => setNewOrderItem({ ...newOrderItem, quantity: parseInt(e.target.value) })}
+                            />
+                          </div>
                         </div>
                         <button 
                           type="button" 
                           onClick={addOrderItem}
-                          className="btn-secondary py-3 px-6 h-fit"
+                          className="btn-secondary h-fit py-3 px-6"
                         >
-                          ADD ITEM
+                          STAGE SKU
                         </button>
                       </div>
                     </div>
                   </div>
 
-                  {/* Added Items List */}
+                  {/* Staged Items List */}
                   <div className="mt-4">
-                    <span className="font-mono text-xs uppercase tracking-widest text-[var(--muted-foreground)] block mb-2">[CURRENT LINE ITEMS]</span>
+                    <span className="font-mono text-[9px] uppercase tracking-widest text-[#525280] block mb-2">[STAGED TRANSACTION BLOCKS]</span>
                     
                     {orderForm.items.length === 0 ? (
-                      <div className="border border-dashed border-black p-4 text-center font-mono text-[10px] uppercase text-[var(--muted-foreground)]">
-                        ADD ITEMS TO INITIATE BASKET
+                      <div className="border border-dashed border-[#2a2a3a] p-4 text-center font-mono text-[9px] uppercase text-[#525280]">
+                        EMPTY BASKET PROTOCOLS: ADD STAGE ITEMS
                       </div>
                     ) : (
-                      <div className="border border-black divide-y divide-black max-h-48 overflow-y-auto">
+                      <div className="border border-[#2a2a3a] divide-y divide-[#2a2a3a] max-h-48 overflow-y-auto font-mono text-xs">
                         {orderForm.items.map((item, index) => (
-                          <div key={index} className="p-3 flex justify-between items-center text-xs hover:bg-[var(--muted)] font-mono">
+                          <div key={index} className="p-3 flex justify-between items-center hover:bg-[rgba(0,255,136,0.02)]">
                             <div>
-                              <span className="font-bold block">{item.sku}</span>
-                              <span className="text-[10px] text-[var(--muted-foreground)]">{item.name} x {item.quantity}</span>
+                              <span className="font-bold text-[var(--accent)] block">{item.sku}</span>
+                              <span className="text-[10px] text-[#8c8cbe]">{item.name} x {item.quantity}</span>
                             </div>
                             <div className="flex items-center gap-3">
-                              <span className="font-bold">${(item.price * item.quantity).toFixed(2)}</span>
+                              <span className="font-bold text-white">${(item.price * item.quantity).toFixed(2)}</span>
                               <button 
                                 type="button" 
                                 onClick={() => removeOrderItem(index)}
-                                className="text-black hover:opacity-60"
+                                className="text-[#ff3366] hover:opacity-60"
                               >
                                 <Trash2 size={12} />
                               </button>
@@ -1040,10 +1076,10 @@ export default function App() {
                     )}
                   </div>
 
-                  {/* Calculated aggregate cost */}
-                  <div className="border-t-2 border-black pt-4 flex justify-between items-center select-none">
-                    <span className="font-mono text-xs uppercase tracking-wider font-bold">Aggregate Total:</span>
-                    <span className="font-display font-bold text-2xl">${orderTotalLive.toFixed(2)}</span>
+                  {/* Live subtotal */}
+                  <div className="border-t border-[#2a2a3a] pt-4 flex justify-between items-center select-none">
+                    <span className="font-mono text-xs uppercase tracking-wider font-bold text-[#8c8cbe]">Live Transact Sum:</span>
+                    <span className="font-display font-bold text-2xl text-[var(--accent)] shadow-sm">${orderTotalLive.toFixed(2)}</span>
                   </div>
 
                   <button 
@@ -1051,66 +1087,66 @@ export default function App() {
                     className="btn-primary w-full justify-center mt-2"
                     disabled={orderForm.items.length === 0 || !orderForm.customer_id}
                   >
-                    PLACE ORDER & ATOMIC DECREMENT
+                    PLACE ORDER & DEDUCT STOCKS
                   </button>
                 </form>
               </div>
 
-              {/* Order Lists */}
+              {/* Order Transaction listing */}
               <div className="lg:col-span-7">
-                <span className="font-mono text-xs uppercase tracking-widest text-[var(--muted-foreground)] block mb-6">[TRANSACT HISTORY]</span>
+                <span className="font-mono text-xs uppercase tracking-widest text-[#525280] block mb-6">[TRANSACT HISTORY LOGGER]</span>
                 
                 {/* Table */}
-                <div className="border-2 border-black overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+                <div className="border border-[#2a2a3a] hologram-card cyber-chamfer overflow-hidden">
+                  <table className="w-full text-left border-collapse font-mono text-xs">
                     <thead>
-                      <tr className="bg-black text-white font-mono text-xs uppercase tracking-widest">
-                        <th className="py-4 px-6 font-medium">ORDER ID</th>
-                        <th className="py-4 px-6 font-medium">CUSTOMER</th>
-                        <th className="py-4 px-6 font-medium text-right">TOTAL</th>
-                        <th className="py-4 px-6 font-medium text-center">ACTION</th>
+                      <tr className="bg-[#12121a] text-[var(--accent)] uppercase tracking-widest border-b border-[#2a2a3a]">
+                        <th className="py-4 px-6 font-bold">TRANSACT_ID</th>
+                        <th className="py-4 px-6 font-bold">CLIENT NODE</th>
+                        <th className="py-4 px-6 font-bold text-right">VAL_SUM</th>
+                        <th className="py-4 px-6 font-bold text-center">CONTROL</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-black font-body text-sm">
+                    <tbody className="divide-y divide-[#2a2a3a] text-[#c0c0d8]">
                       {orders.length === 0 ? (
                         <tr>
-                          <td colSpan="4" className="py-8 text-center font-mono text-xs text-[var(--muted-foreground)] uppercase">
-                            NO HISTORY OF COMPLETED ORDERS
+                          <td colSpan="4" className="py-8 text-center text-[#525280] uppercase tracking-widest">
+                            ERROR: NO COMPLETED SALES BLOCS DETECTED
                           </td>
                         </tr>
                       ) : (
                         orders.map((o) => (
-                          <tr key={o.id} className="hover:bg-[var(--muted)] transition-colors duration-100">
-                            <td className="py-4 px-6 font-mono text-xs font-bold">
-                              #ORD-{String(o.id).padStart(4, '0')}
-                              <span className="block font-normal text-[9px] text-[var(--muted-foreground)]">
+                          <tr key={o.id} className="hover:bg-[rgba(0,255,136,0.02)] transition-colors duration-150">
+                            <td className="py-4 px-6 text-[var(--accent-tertiary)] font-bold">
+                              #TRX-{String(o.id).padStart(4, '0')}
+                              <span className="block font-normal text-[8px] text-[#525280]">
                                 {new Date(o.created_at).toLocaleString()}
                               </span>
                             </td>
                             <td className="py-4 px-6">
-                              <span className="font-display font-bold block">{o.customer?.full_name || 'Dieter Rams'}</span>
-                              <span className="font-mono text-[9px] text-[var(--muted-foreground)] block">
+                              <span className="font-display font-bold block text-white">{o.customer?.full_name || 'Dieter Rams'}</span>
+                              <span className="text-[8px] text-[#525280] block">
                                 {o.customer?.email}
                               </span>
                             </td>
-                            <td className="py-4 px-6 text-right font-mono font-bold">
+                            <td className="py-4 px-6 text-right font-bold text-white">
                               ${o.total_amount.toFixed(2)}
                             </td>
-                            <td className="py-4 px-6 text-center">
+                            <td className="py-4 px-6">
                               <div className="flex gap-2 justify-center">
                                 <button 
                                   onClick={() => setSelectedOrder(o)} 
-                                  className="p-2 border border-black hover:bg-black hover:text-white transition-colors duration-100"
+                                  className="p-2 border border-[#2a2a3a] text-[var(--accent)] hover:border-[var(--accent)] hover:shadow-neon transition-all"
                                   title="View Order Details"
                                 >
-                                  <Eye size={14} />
+                                  <Eye size={12} />
                                 </button>
                                 <button 
                                   onClick={() => setDeleteConfirm({ show: true, type: 'order', id: o.id })} 
-                                  className="p-2 border border-black hover:bg-black hover:text-white transition-colors duration-100"
-                                  title="Cancel/Delete Order"
+                                  className="p-2 border border-[#2a2a3a] text-[#ff3366] hover:border-[#ff3366] hover:shadow-[0_0_6px_rgba(255,51,102,0.4)] transition-all"
+                                  title="Cancel/Rollback Order"
                                 >
-                                  <X size={14} />
+                                  <X size={12} />
                                 </button>
                               </div>
                             </td>
@@ -1130,67 +1166,71 @@ export default function App() {
 
       </main>
 
-      {/* ================= MODAL: ORDER DETAILS ================= */}
+      {/* ================= MODAL: ORDER DETAILS (Holographic Overlay) ================= */}
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
-          <div className="bg-white border-4 border-black w-full max-w-2xl p-8 relative" style={{ transition: 'all 100ms steps(2)' }}>
+        <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-[#12121a] border-2 border-[var(--accent)] w-full max-w-2xl p-8 relative cyber-chamfer shadow-[0_0_30px_rgba(0,255,136,0.15)]" style={{ transition: 'all 150ms ease' }}>
             
+            {/* HUD Bracket overlays */}
+            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[var(--accent)]"></div>
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[var(--accent)]"></div>
+
             {/* Close Button */}
             <button 
               onClick={() => setSelectedOrder(null)}
-              className="absolute top-6 right-6 p-2 border border-black hover:bg-black hover:text-white transition-colors"
+              className="absolute top-6 right-6 p-2 border border-[#2a2a3a] text-[var(--accent)] hover:border-[var(--accent)] hover:shadow-neon transition-colors"
             >
               <X size={16} />
             </button>
 
             {/* Header info */}
             <div className="mb-6">
-              <span className="font-mono text-xs uppercase tracking-widest text-[var(--muted-foreground)]">[TRANSACT DETAILS]</span>
-              <h3 className="font-display font-bold text-3xl uppercase tracking-tight mt-1">
-                ORDER #ORD-{String(selectedOrder.id).padStart(4, '0')}
+              <span className="font-mono text-xs uppercase tracking-widest text-[var(--accent)]">[SYSTEM: ORDER_INSPECT]</span>
+              <h3 className="font-display font-black text-2xl uppercase tracking-wider text-white mt-1">
+                TRANSACTION #TRX-{String(selectedOrder.id).padStart(4, '0')}
               </h3>
-              <p className="font-mono text-xs text-[var(--muted-foreground)] mt-1">
-                COMPLETED TRANSACTION ON: {new Date(selectedOrder.created_at).toLocaleString()}
+              <p className="font-mono text-[9px] text-[#525280] mt-1">
+                INVENTORY BLOCK WRITE TIME: {new Date(selectedOrder.created_at).toLocaleString()}
               </p>
             </div>
 
-            <div className="line-medium my-4"></div>
+            <div className="h-[1px] bg-[#2a2a3a] my-4"></div>
 
             {/* Customer Details */}
             <div className="mb-6 grid grid-cols-2 gap-4">
               <div>
-                <span className="form-label">Client Customer</span>
-                <span className="font-display font-bold text-md block">{selectedOrder.customer?.full_name}</span>
-                <span className="font-mono text-xs text-[var(--muted-foreground)] block">{selectedOrder.customer?.email}</span>
+                <span className="form-label">DECODER_CLIENT_NODE</span>
+                <span className="font-display font-bold text-md block text-white">{selectedOrder.customer?.full_name}</span>
+                <span className="font-mono text-xs text-[var(--accent-tertiary)] block">{selectedOrder.customer?.email}</span>
               </div>
               <div>
-                <span className="form-label">Contact Phone</span>
-                <span className="font-mono text-xs block">{selectedOrder.customer?.phone_number || '—'}</span>
+                <span className="form-label">DATALINK_PHONE</span>
+                <span className="font-mono text-xs block text-white">{selectedOrder.customer?.phone_number || '—'}</span>
               </div>
             </div>
 
-            <div className="line-thin my-4"></div>
+            <div className="h-[1px] bg-[#2a2a3a] my-4"></div>
 
             {/* Ordered Items Table */}
-            <div className="mb-6 max-h-48 overflow-y-auto border border-black">
-              <table className="w-full text-left border-collapse font-mono text-xs">
+            <div className="mb-6 max-h-48 overflow-y-auto border border-[#2a2a3a]">
+              <table className="w-full text-left border-collapse font-mono text-[10px]">
                 <thead>
-                  <tr className="bg-black text-white uppercase tracking-wider">
-                    <th className="p-3">SKU</th>
-                    <th className="p-3">PRODUCT</th>
-                    <th className="p-3 text-right">UNIT PRICE</th>
-                    <th className="p-3 text-right">QTY</th>
-                    <th className="p-3 text-right font-bold">TOTAL</th>
+                  <tr className="bg-[#0a0a0f] text-[var(--accent)] uppercase tracking-wider border-b border-[#2a2a3a]">
+                    <th className="p-3 font-bold">SKU</th>
+                    <th className="p-3 font-bold">LABEL</th>
+                    <th className="p-3 text-right font-bold">VAL_UNIT_PRICE</th>
+                    <th className="p-3 text-right font-bold">STAGED</th>
+                    <th className="p-3 text-right font-bold">SUM_TOTAL</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-black">
+                <tbody className="divide-y divide-[#2a2a3a] text-[#c0c0d8]">
                   {selectedOrder.items.map((item) => (
-                    <tr key={item.id} className="hover:bg-[var(--muted)]">
-                      <td className="p-3 font-bold">{item.product?.sku || 'SKU'}</td>
-                      <td className="p-3 font-body">{item.product?.name || 'Product'}</td>
+                    <tr key={item.id} className="hover:bg-[rgba(0,255,136,0.02)]">
+                      <td className="p-3 font-bold text-[var(--accent-tertiary)]">{item.product?.sku || 'SKU'}</td>
+                      <td className="p-3 font-body text-white">{item.product?.name || 'Product'}</td>
                       <td className="p-3 text-right">${item.unit_price.toFixed(2)}</td>
-                      <td className="p-3 text-right">{item.quantity}</td>
-                      <td className="p-3 text-right font-bold">${item.line_total.toFixed(2)}</td>
+                      <td className="p-3 text-right text-white font-bold">{item.quantity}</td>
+                      <td className="p-3 text-right text-[var(--accent)] font-bold">${item.line_total.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1198,9 +1238,9 @@ export default function App() {
             </div>
 
             {/* Total Aggregate */}
-            <div className="flex justify-between items-center border-t-4 border-black pt-4 select-none">
-              <span className="font-mono text-sm uppercase tracking-wider font-bold">Transaction Sum:</span>
-              <span className="font-display font-bold text-3xl">${selectedOrder.total_amount.toFixed(2)}</span>
+            <div className="flex justify-between items-center border-t-2 border-[#2a2a3a] pt-4 select-none">
+              <span className="font-mono text-xs uppercase tracking-wider font-bold text-[#8c8cbe]">AGGREGATE SUM:</span>
+              <span className="font-display font-black text-2xl text-[var(--accent)] shadow-sm">${selectedOrder.total_amount.toFixed(2)}</span>
             </div>
 
             {/* Close footer button */}
@@ -1209,7 +1249,7 @@ export default function App() {
                 onClick={() => setSelectedOrder(null)}
                 className="btn-primary px-8"
               >
-                CLOSE DETAILS
+                DISMISS INSPECTOR
               </button>
             </div>
 
@@ -1217,18 +1257,23 @@ export default function App() {
         </div>
       )}
 
-      {/* ================= MODAL: GENERIC CONFIRMATION ================= */}
+      {/* ================= MODAL: GENERIC CONFIRMATION (Glow HUD Panels) ================= */}
       {deleteConfirm.show && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-[100] flex items-center justify-center p-4">
-          <div className="bg-white border-4 border-black w-full max-w-md p-8 relative">
-            <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-4">
-              CONFIRM DESTRUCTIVE ACTION
+        <div className="fixed inset-0 bg-black bg-opacity-80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-[#12121a] border-2 border-[#ff3366] w-full max-w-md p-8 relative cyber-chamfer shadow-[0_0_30px_rgba(255,51,102,0.15)]">
+            
+            {/* HUD pink border brackets */}
+            <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-[#ff3366]"></div>
+            <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-[#ff3366]"></div>
+
+            <h3 className="font-display font-black text-xl uppercase tracking-wider mb-4 text-[#ff3366]">
+              // DESTRUCTIVE_TRIGGER_WARNING
             </h3>
             
-            <p className="font-body text-sm leading-relaxed text-[var(--muted-foreground)] mb-8">
-              {deleteConfirm.type === 'order' && 'Warning: Cancelling this order will permanently delete the transaction record and immediately replenish the original quantities back into product stocks.'}
-              {deleteConfirm.type === 'product' && 'Warning: Deleting this product SKU will permanently erase it from the catalog. Historical order lists referring to this product will remain but product schema data will be detached.'}
-              {deleteConfirm.type === 'customer' && 'Warning: Deleting this customer will remove their client registration record and cascade delete their transaction histories.'}
+            <p className="font-body text-xs leading-relaxed text-[#c0c0d8] mb-8">
+              {deleteConfirm.type === 'order' && 'PURGE_WARNING: Cancelling this transaction block will permanently drop the database logs and immediately replenish the staged quantities back to inventory stock engines.'}
+              {deleteConfirm.type === 'product' && 'PURGE_WARNING: Deleting this product SKU will wipe its catalog records. Historical orders references will remain intact but product metadata will be detached.'}
+              {deleteConfirm.type === 'customer' && 'PURGE_WARNING: Cascade deletes are active. Purging this customer node will cascade destroy their historical sales log blocks completely.'}
             </p>
 
             <div className="flex gap-4 justify-end">
@@ -1236,7 +1281,7 @@ export default function App() {
                 onClick={() => setDeleteConfirm({ show: false, type: '', id: null })}
                 className="btn-secondary"
               >
-                ABORT ACTION
+                ABORT FORCE
               </button>
               
               <button 
@@ -1245,9 +1290,10 @@ export default function App() {
                   if (deleteConfirm.type === 'customer') handleCustomerDelete(deleteConfirm.id);
                   if (deleteConfirm.type === 'order') handleOrderCancel(deleteConfirm.id);
                 }}
-                className="btn-primary"
+                className="btn-primary border-[#ff3366] text-[#ff3366] hover:bg-[#ff3366] hover:text-black hover:shadow-[0_0_15px_rgba(255,51,102,0.4)]"
+                style={{ borderColor: '#ff3366', color: '#ff3366' }}
               >
-                CONFIRM DELETION
+                CONFIRM PURGE
               </button>
             </div>
           </div>
