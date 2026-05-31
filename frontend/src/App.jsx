@@ -22,6 +22,10 @@ import {
   Filter
 } from 'lucide-react';
 import { api } from './services/api';
+import PageHeader from './components/PageHeader';
+import HUDToast from './components/HUDToast';
+import Modal from './components/Modal';
+import FilterPopover from './components/FilterPopover';
 
 export default function App() {
   // Navigation State
@@ -439,21 +443,11 @@ export default function App() {
     <div className="min-h-screen bg-[#0b0b12] text-[#f3f4f6] flex flex-col md:flex-row relative">
       
       {/* Dynamic Toast System */}
-      {toast.show && (
-        <div 
-          className="fixed bottom-8 right-8 z-[1000] border border-[#2a2d3a] bg-[#12131a] text-[#fff] px-6 py-4 flex items-center justify-between gap-4 max-w-sm cursor-pointer shadow-lg rounded-lg"
-          style={{ transition: 'all 150ms ease' }}
-          onClick={() => setToast(prev => ({ ...prev, show: false }))}
-        >
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-xs uppercase tracking-wider font-bold text-[var(--accent)]">
-              [INFO]
-            </span>
-            <span className="text-xs font-semibold leading-tight">{toast.message}</span>
-          </div>
-          <X size={14} className="text-[#9ca3af] hover:text-[#fff]" />
-        </div>
-      )}
+      <HUDToast 
+        show={toast.show} 
+        message={toast.message} 
+        onClose={() => setToast(prev => ({ ...prev, show: false }))} 
+      />
 
       {/* Navigation Sidebar (Desktop B2B Console) */}
       <aside className="hidden md:flex flex-col w-72 bg-[#12131a] border-r border-[#2a2d3a] p-8 shrink-0 justify-between select-none">
@@ -587,17 +581,11 @@ export default function App() {
         {currentTab === 'dashboard' && (
           <div className="editorial-container">
             {/* Elegant HUD Sub-Header */}
-            <div className="mb-10 select-none relative pl-6">
-              <span className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--accent)] block mb-1">// Operational Control Center</span>
-              <h2 className="font-display font-bold text-3xl tracking-tight text-white select-none">
-                System Overview
-              </h2>
-              <div className="flex items-center justify-between border-b border-[#2a2d3a] pb-4 mt-4">
-                <span className="font-mono text-xs text-[#9ca3af]">
-                  Database feeds loaded. Operations system report: nominal.
-                </span>
-              </div>
-            </div>
+            <PageHeader 
+              tag="// Operational Control Center" 
+              title="System Overview" 
+              subTitle="Database feeds loaded. Operations system report: nominal." 
+            />
 
             {/* Standard B2B Elevated Cards */}
             <section className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12 select-none">
@@ -735,11 +723,7 @@ export default function App() {
         {currentTab === 'products' && (
           <div className="editorial-container">
             {/* Header */}
-            <div className="mb-8 pl-6">
-              <span className="font-mono text-xs uppercase tracking-widest text-[var(--accent)]">[Catalog Console]</span>
-              <h2 className="font-display font-bold text-2xl uppercase tracking-wider text-white mt-1">Product Inventory</h2>
-              <div className="h-[1px] bg-[#2a2d3a] mt-4"></div>
-            </div>
+            <PageHeader tag="[Catalog Console]" title="Product Inventory" />
  
             {/* CTA bar */}
             <div className="flex justify-between items-center mb-6 pl-6 pr-2">
@@ -1102,11 +1086,7 @@ export default function App() {
         {currentTab === 'customers' && (
           <div className="editorial-container">
             {/* Header */}
-            <div className="mb-8 pl-6">
-              <span className="font-mono text-xs uppercase tracking-widest text-[var(--accent)]">[Client Module]</span>
-              <h2 className="font-display font-bold text-2xl uppercase tracking-wider text-white mt-1">Client Database</h2>
-              <div className="h-[1px] bg-[#2a2d3a] mt-4"></div>
-            </div>
+            <PageHeader tag="[Client Module]" title="Client Database" />
  
             {/* CTA bar */}
             <div className="flex justify-between items-center mb-6 pl-6 pr-2">
@@ -1150,176 +1130,89 @@ export default function App() {
                         
                         {/* Name Column Header with Filter Popover */}
                         <th className="py-4 px-6 font-semibold relative select-none">
-                          <div className="flex items-center gap-2">
-                            <span>CLIENT NAME</span>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveFilterDropdown({
-                                  table: 'customers',
-                                  column: activeFilterDropdown.column === 'name' ? '' : 'name'
-                                });
+                          <FilterPopover
+                            isOpen={activeFilterDropdown.table === 'customers' && activeFilterDropdown.column === 'name'}
+                            onToggle={() => setActiveFilterDropdown({
+                              table: 'customers',
+                              column: activeFilterDropdown.column === 'name' ? '' : 'name'
+                            })}
+                            onClose={() => setActiveFilterDropdown({ table: '', column: '' })}
+                            onClear={() => handleClearFilter('customers', 'name', ['name'])}
+                            onApply={() => handleApplyFilter('customers', 'name', { name: stagedFilters.name })}
+                            isActive={!!appliedFilters.customers.name}
+                            columnTitle="CLIENT NAME"
+                            filterLabel="Filter by Client Name"
+                            title="Filter by Name"
+                          >
+                            <input 
+                              type="text" 
+                              placeholder="e.g. Charlotte Perriand"
+                              className="input-field"
+                              value={stagedFilters.name || ''}
+                              onChange={(e) => setStagedFilters({ ...stagedFilters, name: e.target.value })}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleApplyFilter('customers', 'name', { name: stagedFilters.name });
                               }}
-                              className={`hover:text-white transition-colors p-1 ${appliedFilters.customers.name ? 'text-[var(--accent)] font-bold' : 'text-[#555770]'}`}
-                              title="Filter by Name"
-                            >
-                              <Filter size={12} />
-                            </button>
-                          </div>
-                          
-                          {activeFilterDropdown.table === 'customers' && activeFilterDropdown.column === 'name' && (
-                            <div className="absolute top-12 left-6 z-50 w-64 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-md shadow-2xl normal-case font-normal text-xs text-[#f3f4f6]">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); setActiveFilterDropdown({ table: '', column: '' }); }}
-                                className="absolute top-3 right-3 text-[#9ca3af] hover:text-white"
-                              >
-                                <X size={12} />
-                              </button>
-                              <div className="mb-3">
-                                <label className="form-label mb-1">Filter by Client Name</label>
-                                <input 
-                                  type="text" 
-                                  placeholder="e.g. Charlotte Perriand"
-                                  className="input-field"
-                                  value={stagedFilters.name || ''}
-                                  onChange={(e) => setStagedFilters({ ...stagedFilters, name: e.target.value })}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleApplyFilter('customers', 'name', { name: stagedFilters.name });
-                                  }}
-                                />
-                              </div>
-                              <div className="flex gap-2 justify-end mt-4">
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleClearFilter('customers', 'name', ['name']); }}
-                                  className="btn-ghost py-1 px-2.5 text-[10px]"
-                                >
-                                  Clear
-                                </button>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleApplyFilter('customers', 'name', { name: stagedFilters.name }); }}
-                                  className="btn-primary py-1 px-3 text-[10px]"
-                                >
-                                  Apply
-                                </button>
-                              </div>
-                            </div>
-                          )}
+                            />
+                          </FilterPopover>
                         </th>
- 
+
                         {/* Email Column Header with Filter Popover */}
                         <th className="py-4 px-6 font-semibold relative select-none">
-                          <div className="flex items-center gap-2">
-                            <span>COMMS_EMAIL</span>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveFilterDropdown({
-                                  table: 'customers',
-                                  column: activeFilterDropdown.column === 'email' ? '' : 'email'
-                                });
+                          <FilterPopover
+                            isOpen={activeFilterDropdown.table === 'customers' && activeFilterDropdown.column === 'email'}
+                            onToggle={() => setActiveFilterDropdown({
+                              table: 'customers',
+                              column: activeFilterDropdown.column === 'email' ? '' : 'email'
+                            })}
+                            onClose={() => setActiveFilterDropdown({ table: '', column: '' })}
+                            onClear={() => handleClearFilter('customers', 'email', ['email'])}
+                            onApply={() => handleApplyFilter('customers', 'email', { email: stagedFilters.email })}
+                            isActive={!!appliedFilters.customers.email}
+                            columnTitle="COMMS_EMAIL"
+                            filterLabel="Filter by Email"
+                            title="Filter by Email"
+                          >
+                            <input 
+                              type="text" 
+                              placeholder="e.g. charlotte@cassina"
+                              className="input-field"
+                              value={stagedFilters.email || ''}
+                              onChange={(e) => setStagedFilters({ ...stagedFilters, email: e.target.value })}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleApplyFilter('customers', 'email', { email: stagedFilters.email });
                               }}
-                              className={`hover:text-white transition-colors p-1 ${appliedFilters.customers.email ? 'text-[var(--accent)] font-bold' : 'text-[#555770]'}`}
-                              title="Filter by Email"
-                            >
-                              <Filter size={12} />
-                            </button>
-                          </div>
-                          
-                          {activeFilterDropdown.table === 'customers' && activeFilterDropdown.column === 'email' && (
-                            <div className="absolute top-12 left-6 z-50 w-64 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-md shadow-2xl normal-case font-normal text-xs text-[#f3f4f6]">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); setActiveFilterDropdown({ table: '', column: '' }); }}
-                                className="absolute top-3 right-3 text-[#9ca3af] hover:text-white"
-                              >
-                                <X size={12} />
-                              </button>
-                              <div className="mb-3">
-                                <label className="form-label mb-1">Filter by Email</label>
-                                <input 
-                                  type="text" 
-                                  placeholder="e.g. charlotte@cassina"
-                                  className="input-field"
-                                  value={stagedFilters.email || ''}
-                                  onChange={(e) => setStagedFilters({ ...stagedFilters, email: e.target.value })}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleApplyFilter('customers', 'email', { email: stagedFilters.email });
-                                  }}
-                                />
-                              </div>
-                              <div className="flex gap-2 justify-end mt-4">
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleClearFilter('customers', 'email', ['email']); }}
-                                  className="btn-ghost py-1 px-2.5 text-[10px]"
-                                >
-                                  Clear
-                                </button>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleApplyFilter('customers', 'email', { email: stagedFilters.email }); }}
-                                  className="btn-primary py-1 px-3 text-[10px]"
-                                >
-                                  Apply
-                                </button>
-                              </div>
-                            </div>
-                          )}
+                            />
+                          </FilterPopover>
                         </th>
- 
+
                         {/* Phone Column Header with Filter Popover */}
                         <th className="py-4 px-6 font-semibold relative select-none">
-                          <div className="flex items-center gap-2">
-                            <span>COMMS_PHONE</span>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveFilterDropdown({
-                                  table: 'customers',
-                                  column: activeFilterDropdown.column === 'phone' ? '' : 'phone'
-                                });
+                          <FilterPopover
+                            isOpen={activeFilterDropdown.table === 'customers' && activeFilterDropdown.column === 'phone'}
+                            onToggle={() => setActiveFilterDropdown({
+                              table: 'customers',
+                              column: activeFilterDropdown.column === 'phone' ? '' : 'phone'
+                            })}
+                            onClose={() => setActiveFilterDropdown({ table: '', column: '' })}
+                            onClear={() => handleClearFilter('customers', 'phone', ['phone'])}
+                            onApply={() => handleApplyFilter('customers', 'phone', { phone: stagedFilters.phone })}
+                            isActive={!!appliedFilters.customers.phone}
+                            columnTitle="COMMS_PHONE"
+                            filterLabel="Filter by Phone"
+                            title="Filter by Phone"
+                          >
+                            <input 
+                              type="text" 
+                              placeholder="e.g. +33 6"
+                              className="input-field font-mono"
+                              value={stagedFilters.phone || ''}
+                              onChange={(e) => setStagedFilters({ ...stagedFilters, phone: e.target.value })}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleApplyFilter('customers', 'phone', { phone: stagedFilters.phone });
                               }}
-                              className={`hover:text-white transition-colors p-1 ${appliedFilters.customers.phone ? 'text-[var(--accent)] font-bold' : 'text-[#555770]'}`}
-                              title="Filter by Phone"
-                            >
-                              <Filter size={12} />
-                            </button>
-                          </div>
-                          
-                          {activeFilterDropdown.table === 'customers' && activeFilterDropdown.column === 'phone' && (
-                            <div className="absolute top-12 left-6 z-50 w-64 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-md shadow-2xl normal-case font-normal text-xs text-[#f3f4f6]">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); setActiveFilterDropdown({ table: '', column: '' }); }}
-                                className="absolute top-3 right-3 text-[#9ca3af] hover:text-white"
-                              >
-                                <X size={12} />
-                              </button>
-                              <div className="mb-3">
-                                <label className="form-label mb-1">Filter by Phone</label>
-                                <input 
-                                  type="text" 
-                                  placeholder="e.g. +33 6"
-                                  className="input-field font-mono"
-                                  value={stagedFilters.phone || ''}
-                                  onChange={(e) => setStagedFilters({ ...stagedFilters, phone: e.target.value })}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleApplyFilter('customers', 'phone', { phone: stagedFilters.phone });
-                                  }}
-                                />
-                              </div>
-                              <div className="flex gap-2 justify-end mt-4">
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleClearFilter('customers', 'phone', ['phone']); }}
-                                  className="btn-ghost py-1 px-2.5 text-[10px]"
-                                >
-                                  Clear
-                                </button>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleApplyFilter('customers', 'phone', { phone: stagedFilters.phone }); }}
-                                  className="btn-primary py-1 px-3 text-[10px]"
-                                >
-                                  Apply
-                                </button>
-                              </div>
-                            </div>
-                          )}
+                            />
+                          </FilterPopover>
                         </th>
                         <th className="py-4 px-6 font-semibold text-center select-none">DELETE</th>
                       </tr>
@@ -1369,11 +1262,7 @@ export default function App() {
         {currentTab === 'orders' && (
           <div className="editorial-container">
             {/* Header */}
-            <div className="mb-8 pl-6">
-              <span className="font-mono text-xs uppercase tracking-widest text-[var(--accent)]">[Transaction Module]</span>
-              <h2 className="font-display font-bold text-2xl uppercase tracking-wider text-white mt-1">Transaction Ledger</h2>
-              <div className="h-[1px] bg-[#2a2d3a] mt-4"></div>
-            </div>
+            <PageHeader tag="[Transaction Module]" title="Transaction Ledger" />
  
             {/* CTA bar */}
             <div className="flex justify-between items-center mb-6 pl-6 pr-2">
@@ -1664,380 +1553,324 @@ export default function App() {
       </main>
  
       {/* ================= MODAL: INJECT SKU / EDIT SKU CATALOG ================= */}
-      {(showProductModal || editProduct) && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-[#12131a] border border-[#2a2d3a] w-full max-w-md p-8 relative rounded-lg shadow-2xl">
-            
-            {/* Abort X Button */}
-            <button 
-              onClick={() => { setShowProductModal(false); setEditProduct(null); }}
-              className="absolute top-6 right-6 p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-white hover:text-white rounded transition-colors"
-            >
-              <X size={16} />
-            </button>
- 
-            <div className="mb-6">
-              <span className="font-mono text-xs uppercase tracking-widest text-[var(--accent)]">[SKU Registration Node]</span>
-              <h3 className="font-display font-bold text-xl uppercase tracking-wider text-white mt-1">
-                {editProduct ? 'Edit SKU Profile' : 'Inject SKU Catalog'}
-              </h3>
-              <p className="font-mono text-[9px] text-[#9ca3af] mt-1">
-                WRITE MODE: DATABASE LIVE STREAMING
-              </p>
-            </div>
- 
-            <div className="h-[1px] bg-[#2a2d3a] my-4"></div>
- 
-            <form onSubmit={editProduct ? handleProductUpdate : handleProductCreate} className="flex flex-col gap-5">
-              <div>
-                <label className="form-label">Product Name</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. StarkDesk Lamp" 
-                  className="input-field"
-                  value={editProduct ? editProduct.name : productForm.name}
-                  onChange={(e) => editProduct 
-                    ? setEditProduct({ ...editProduct, name: e.target.value })
-                    : setProductForm({ ...productForm, name: e.target.value })
-                  }
-                  required
-                />
-              </div>
- 
-              <div>
-                <label className="form-label">SKU Identifier (Unique)</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. LIGHT-003" 
-                  className="input-field uppercase font-mono"
-                  value={editProduct ? editProduct.sku : productForm.sku}
-                  onChange={(e) => editProduct 
-                    ? setEditProduct({ ...editProduct, sku: e.target.value.toUpperCase() })
-                    : setProductForm({ ...productForm, sku: e.target.value.toUpperCase() })
-                  }
-                  required
-                  disabled={!!editProduct} /* cannot edit SKU after creation to ensure DB relational integrity */
-                />
-              </div>
- 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="form-label">Unit Price ($)</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    min="0.01" 
-                    placeholder="180.00" 
-                    className="input-field font-mono"
-                    value={editProduct ? editProduct.price : productForm.price}
-                    onChange={(e) => editProduct 
-                      ? setEditProduct({ ...editProduct, price: e.target.value })
-                      : setProductForm({ ...productForm, price: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Catalog Qty</label>
-                  <input 
-                    type="number" 
-                    min="0" 
-                    placeholder="4" 
-                    className="input-field font-mono"
-                    value={editProduct ? editProduct.quantity_in_stock : productForm.quantity_in_stock}
-                    onChange={(e) => editProduct 
-                      ? setEditProduct({ ...editProduct, quantity_in_stock: e.target.value })
-                      : setProductForm({ ...productForm, quantity_in_stock: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-              </div>
- 
-              <div className="h-[1px] bg-[#2a2d3a] mt-2"></div>
- 
-              <div className="flex gap-4 justify-end mt-2">
-                <button 
-                  type="button" 
-                  onClick={() => { setShowProductModal(false); setEditProduct(null); }} 
-                  className="btn-secondary"
-                  disabled={submitting}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn-primary"
-                  disabled={submitting}
-                >
-                  {submitting ? 'COMMITTING...' : (editProduct ? 'Save Patch' : 'Commit SKU')}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showProductModal || !!editProduct}
+        onClose={() => { setShowProductModal(false); setEditProduct(null); }}
+        tag="[SKU Registration Node]"
+        title={editProduct ? 'Edit SKU Profile' : 'Inject SKU Catalog'}
+        subTitle="WRITE MODE: DATABASE LIVE STREAMING"
+      >
+        <form onSubmit={editProduct ? handleProductUpdate : handleProductCreate} className="flex flex-col gap-5">
+          <div>
+            <label className="form-label">Product Name</label>
+            <input 
+              type="text" 
+              placeholder="e.g. StarkDesk Lamp" 
+              className="input-field"
+              value={editProduct ? editProduct.name : productForm.name}
+              onChange={(e) => editProduct 
+                ? setEditProduct({ ...editProduct, name: e.target.value })
+                : setProductForm({ ...productForm, name: e.target.value })
+              }
+              required
+            />
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className="form-label">SKU Identifier (Unique)</label>
+            <input 
+              type="text" 
+              placeholder="e.g. LIGHT-003" 
+              className="input-field uppercase font-mono"
+              value={editProduct ? editProduct.sku : productForm.sku}
+              onChange={(e) => editProduct 
+                ? setEditProduct({ ...editProduct, sku: e.target.value.toUpperCase() })
+                : setProductForm({ ...productForm, sku: e.target.value.toUpperCase() })
+              }
+              required
+              disabled={!!editProduct} /* cannot edit SKU after creation to ensure DB relational integrity */
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="form-label">Unit Value ($)</label>
+              <input 
+                type="number" 
+                step="0.01" 
+                min="0.01"
+                placeholder="49.99" 
+                className="input-field font-mono"
+                value={editProduct ? editProduct.price : productForm.price}
+                onChange={(e) => editProduct 
+                  ? setEditProduct({ ...editProduct, price: e.target.value })
+                  : setProductForm({ ...productForm, price: e.target.value })
+                }
+                required
+              />
+            </div>
+
+            <div>
+              <label className="form-label">Quantity Staged</label>
+              <input 
+                type="number" 
+                min="0" 
+                placeholder="4" 
+                className="input-field font-mono"
+                value={editProduct ? editProduct.quantity_in_stock : productForm.quantity_in_stock}
+                onChange={(e) => editProduct 
+                  ? setEditProduct({ ...editProduct, quantity_in_stock: e.target.value })
+                  : setProductForm({ ...productForm, quantity_in_stock: e.target.value })
+                }
+                required
+              />
+            </div>
+          </div>
+
+          <div className="h-[1px] bg-[#2a2d3a] mt-2"></div>
+
+          <div className="flex gap-4 justify-end mt-2">
+            <button 
+              type="button" 
+              onClick={() => { setShowProductModal(false); setEditProduct(null); }} 
+              className="btn-secondary"
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="btn-primary"
+              disabled={submitting}
+            >
+              {submitting ? 'COMMITTING...' : (editProduct ? 'Save Patch' : 'Commit SKU')}
+            </button>
+          </div>
+        </form>
+      </Modal>
  
       {/* ================= MODAL: REGISTER CLIENT NODE ================= */}
-      {showCustomerModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-[#12131a] border border-[#2a2d3a] w-full max-w-md p-8 relative rounded-lg shadow-2xl">
-            
-            {/* Abort X Button */}
-            <button 
-              onClick={() => setShowCustomerModal(false)}
-              className="absolute top-6 right-6 p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-white hover:text-white rounded transition-colors"
-            >
-              <X size={16} />
-            </button>
- 
-            <div className="mb-6">
-              <span className="font-mono text-xs uppercase tracking-widest text-[var(--accent)]">[Client Profile Injection]</span>
-              <h3 className="font-display font-bold text-xl uppercase tracking-wider text-white mt-1">
-                Register Client Node
-              </h3>
-              <p className="font-mono text-[9px] text-[#9ca3af] mt-1">
-                WRITE MODE: DATABASE LIVE STREAMING
-              </p>
-            </div>
- 
-            <div className="h-[1px] bg-[#2a2d3a] my-4"></div>
- 
-            <form onSubmit={handleCustomerCreate} className="flex flex-col gap-5">
-              <div>
-                <label className="form-label">Client Full Name</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Charlotte Perriand" 
-                  className="input-field"
-                  value={customerForm.full_name}
-                  onChange={(e) => setCustomerForm({ ...customerForm, full_name: e.target.value })}
-                  required
-                />
-              </div>
- 
-              <div>
-                <label className="form-label">Client Email Address</label>
-                <input 
-                  type="email" 
-                  placeholder="e.g. charlotte@cassina.fr" 
-                  className="input-field"
-                  value={customerForm.email}
-                  onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
-                  required
-                />
-              </div>
- 
-              <div>
-                <label className="form-label">Datalink Comms Phone</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. +33 6 12345678" 
-                  className="input-field font-mono"
-                  value={customerForm.phone_number}
-                  onChange={(e) => setCustomerForm({ ...customerForm, phone_number: e.target.value })}
-                />
-              </div>
- 
-              <div className="h-[1px] bg-[#2a2d3a] mt-2"></div>
- 
-              <div className="flex gap-4 justify-end mt-2">
-                <button 
-                  type="button" 
-                  onClick={() => setShowCustomerModal(false)} 
-                  className="btn-secondary"
-                  disabled={submitting}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn-primary"
-                  disabled={submitting}
-                >
-                  {submitting ? 'INJECTING...' : 'Inject Client'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showCustomerModal}
+        onClose={() => setShowCustomerModal(false)}
+        tag="[Client Profile Injection]"
+        title="Register Client Node"
+        subTitle="WRITE MODE: DATABASE LIVE STREAMING"
+      >
+        <form onSubmit={handleCustomerCreate} className="flex flex-col gap-5">
+          <div>
+            <label className="form-label">Client Full Name</label>
+            <input 
+              type="text" 
+              placeholder="e.g. Charlotte Perriand" 
+              className="input-field"
+              value={customerForm.full_name}
+              onChange={(e) => setCustomerForm({ ...customerForm, full_name: e.target.value })}
+              required
+            />
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className="form-label">Client Email Address</label>
+            <input 
+              type="email" 
+              placeholder="e.g. charlotte@cassina.fr" 
+              className="input-field"
+              value={customerForm.email}
+              onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="form-label">Datalink Comms Phone</label>
+            <input 
+              type="text" 
+              placeholder="e.g. +33 6 12345678" 
+              className="input-field font-mono"
+              value={customerForm.phone_number}
+              onChange={(e) => setCustomerForm({ ...customerForm, phone_number: e.target.value })}
+            />
+          </div>
+
+          <div className="h-[1px] bg-[#2a2d3a] mt-2"></div>
+
+          <div className="flex gap-4 justify-end mt-2">
+            <button 
+              type="button" 
+              onClick={() => setShowCustomerModal(false)} 
+              className="btn-secondary"
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="btn-primary"
+              disabled={submitting}
+            >
+              {submitting ? 'INJECTING...' : 'Inject Client'}
+            </button>
+          </div>
+        </form>
+      </Modal>
  
       {/* ================= MODAL: COMPILE TRANSACTION ================= */}
-      {showOrderModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-[#12131a] border border-[#2a2d3a] w-full max-w-2xl p-8 relative rounded-lg shadow-2xl">
-            
-            {/* Abort X Button */}
-            <button 
-              onClick={() => setShowOrderModal(false)}
-              className="absolute top-6 right-6 p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-white hover:text-white rounded transition-colors"
+      <Modal
+        isOpen={showOrderModal}
+        onClose={() => setShowOrderModal(false)}
+        tag="[Transaction Compiler Engine]"
+        title="Compile Transaction"
+        subTitle="WRITE MODE: DATABASE élő ACID TRANSACTION"
+        size="lg"
+      >
+        <form onSubmit={handleOrderCreate} className="flex flex-col gap-5">
+          {/* Select Customer */}
+          <div>
+            <label className="form-label">Operational Client Node</label>
+            <select 
+              className="input-field font-semibold text-xs bg-[#12131a] text-white focus:outline-none"
+              value={orderForm.customer_id}
+              onChange={(e) => setOrderForm({ ...orderForm, customer_id: e.target.value })}
+              required
             >
-              <X size={16} />
-            </button>
- 
-            <div className="mb-6">
-              <span className="font-mono text-xs uppercase tracking-widest text-[var(--accent)]">[Transaction Compiler Engine]</span>
-              <h3 className="font-display font-bold text-xl uppercase tracking-wider text-white mt-1">
-                Compile Transaction
-              </h3>
-              <p className="font-mono text-[9px] text-[#9ca3af] mt-1">
-                WRITE MODE: DATABASE élő ACID TRANSACTION
-              </p>
-            </div>
- 
-            <div className="h-[1px] bg-[#2a2d3a] my-4"></div>
- 
-            <form onSubmit={handleOrderCreate} className="flex flex-col gap-5">
-              {/* Select Customer */}
-              <div>
-                <label className="form-label">Operational Client Node</label>
+              <option value="">SELECT TARGET PROFILE...</option>
+              {customers.map(c => (
+                <option key={c.id} value={c.id} className="bg-[#12131a]">{c.full_name} ({c.email})</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="h-[1px] bg-[#2a2d3a] my-1"></div>
+
+          {/* Add Staged Item Box */}
+          <div className="border border-[#2a2d3a] p-4 rounded bg-[#171924]/20">
+            <span className="form-label mb-3 text-[10px]">Staging Area — Load Items</span>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <div className="md:col-span-2">
+                <label className="form-label text-[9px]">Select Catalog Product SKU</label>
                 <select 
-                  className="input-field font-semibold text-xs bg-[#12131a] text-white focus:outline-none"
-                  value={orderForm.customer_id}
-                  onChange={(e) => setOrderForm({ ...orderForm, customer_id: e.target.value })}
-                  required
+                  className="input-field text-xs font-mono"
+                  value={newOrderItem.product_id}
+                  onChange={(e) => setNewOrderItem({ ...newOrderItem, product_id: e.target.value })}
                 >
-                  <option value="">SELECT TARGET PROFILE...</option>
-                  {customers.map(c => (
-                    <option key={c.id} value={c.id} className="bg-[#12131a]">{c.full_name} ({c.email})</option>
+                  <option value="">CHOOSE SKU...</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id} disabled={p.quantity_in_stock <= 0}>
+                      {p.sku} — {p.name} (${p.price.toFixed(2)}) [{p.quantity_in_stock} AVAILABLE]
+                    </option>
                   ))}
                 </select>
               </div>
- 
-              <div className="h-[1px] bg-[#2a2d3a] my-1"></div>
- 
-              {/* Add Order Item */}
+
               <div>
-                <h4 className="font-mono text-xs uppercase tracking-wider font-semibold mb-4 text-[var(--accent)]">[Add Staged SKU]</h4>
-                
-                <div className="flex flex-col gap-4">
-                  <div>
-                    <label className="form-label">Inventory Item</label>
-                    <select 
-                      className="input-field font-mono text-xs bg-[#12131a] text-white focus:outline-none animate-none"
-                      value={newOrderItem.product_id}
-                      onChange={(e) => setNewOrderItem({ ...newOrderItem, product_id: e.target.value })}
-                    >
-                      <option value="">SELECT SOURCE CODE...</option>
-                      {products.map(p => (
-                        <option key={p.id} value={p.id} disabled={p.quantity_in_stock === 0} className="bg-[#12131a]">
-                          {p.sku} // {p.name} (${p.price.toFixed(2)}) [STOCKS: {p.quantity_in_stock}]
-                        </option>
-                      ))}
-                    </select>
-                  </div>
- 
-                  <div className="flex gap-4 items-end">
-                    <div className="flex-1">
-                      <label className="form-label">Stage Qty</label>
-                      <input 
-                        type="number" 
-                        min="1" 
-                        className="input-field font-mono"
-                        value={newOrderItem.quantity}
-                        onChange={(e) => setNewOrderItem({ ...newOrderItem, quantity: parseInt(e.target.value) })}
-                      />
-                    </div>
-                    <button 
-                      type="button" 
-                      onClick={addOrderItem}
-                      className="btn-secondary h-fit py-2.5 px-5"
-                    >
-                      Stage SKU
-                    </button>
-                  </div>
+                <label className="form-label text-[9px]">Quantity Staged</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="number" 
+                    min="1" 
+                    className="input-field font-mono text-xs text-center"
+                    value={newOrderItem.quantity}
+                    onChange={(e) => setNewOrderItem({ ...newOrderItem, quantity: parseInt(e.target.value) || 1 })}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={addOrderItem}
+                    className="btn-primary py-1 px-4 text-xs tracking-wider"
+                  >
+                    Stage
+                  </button>
                 </div>
               </div>
- 
-              {/* Staged Items List */}
-              <div className="mt-2">
-                <span className="font-mono text-[9px] uppercase tracking-widest text-[#9ca3af] block mb-2">[Staged items basket]</span>
-                
-                {orderForm.items.length === 0 ? (
-                  <div className="border border-dashed border-[#2a2d3a] p-4 text-center font-mono text-[9px] uppercase text-[#555770] rounded">
-                    Staging queue is empty. Stage catalog SKUs above.
-                  </div>
-                ) : (
-                  <div className="border border-[#2a2d3a] divide-y divide-[#2a2d3a] max-h-40 overflow-y-auto rounded text-xs font-mono">
+            </div>
+          </div>
+
+          {/* Staged Items Table list */}
+          <div>
+            <span className="form-label mb-2 text-[10px]">Staged Transaction queue ({orderForm.items.length})</span>
+            {orderForm.items.length === 0 ? (
+              <div className="border border-dashed border-[#2a2d3a] p-6 text-center text-[#9ca3af] text-xs uppercase tracking-widest font-mono rounded">
+                Transaction Memory Staging Empty
+              </div>
+            ) : (
+              <div className="border border-[#2a2d3a] rounded max-h-36 overflow-y-auto">
+                <table className="w-full text-left border-collapse text-[10px]">
+                  <thead>
+                    <tr className="bg-[#171924] text-[#9ca3af] uppercase tracking-wider border-b border-[#2a2d3a] font-mono">
+                      <th className="p-2 font-semibold">SKU</th>
+                      <th className="p-2 font-semibold">Product Name</th>
+                      <th className="p-2 text-right font-semibold">Value</th>
+                      <th className="p-2 text-right font-semibold">Qty</th>
+                      <th className="p-2 text-right font-semibold">Sum</th>
+                      <th className="p-2 text-center font-semibold">Void</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#2a2d3a] text-[#f3f4f6] font-mono">
                     {orderForm.items.map((item, index) => (
-                      <div key={index} className="p-3 flex justify-between items-center hover:bg-[#171924]/30">
-                        <div>
-                          <span className="font-bold text-[var(--accent)] block">{item.sku}</span>
-                          <span className="text-[10px] text-[#9ca3af]">{item.name} x {item.quantity}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-white">${(item.price * item.quantity).toFixed(2)}</span>
+                      <tr key={index} className="hover:bg-[#171924]/30">
+                        <td className="p-2 font-bold text-[var(--accent)]">{item.sku}</td>
+                        <td className="p-2 font-body text-white">{item.name}</td>
+                        <td className="p-2 text-right">${item.price.toFixed(2)}</td>
+                        <td className="p-2 text-right text-white font-bold">{item.quantity}</td>
+                        <td className="p-2 text-right text-[var(--accent)] font-bold">${(item.price * item.quantity).toFixed(2)}</td>
+                        <td className="p-2 text-center">
                           <button 
                             type="button" 
                             onClick={() => removeOrderItem(index)}
-                            className="text-[#ef4444] hover:opacity-60"
+                            className="p-1 border border-transparent hover:border-[#ef4444] text-[#9ca3af] hover:text-[#ef4444] rounded transition-all"
+                            title="Remove item"
                           >
-                            <Trash2 size={12} />
+                            <Trash2 size={10} />
                           </button>
-                        </div>
-                      </div>
+                        </td>
+                      </tr>
                     ))}
-                  </div>
-                )}
+                  </tbody>
+                </table>
               </div>
- 
-              {/* Live subtotal */}
-              <div className="border-t border-[#2a2d3a] pt-4 flex justify-between items-center select-none">
-                <span className="font-mono text-xs uppercase tracking-wider font-semibold text-[#9ca3af]">Total Transaction:</span>
-                <span className="font-display font-bold text-2xl text-white">${orderTotalLive.toFixed(2)}</span>
-              </div>
- 
-              <div className="h-[1px] bg-[#2a2d3a] mt-2"></div>
- 
-              <div className="flex gap-4 justify-end">
-                <button 
-                  type="button" 
-                  onClick={() => setShowOrderModal(false)} 
-                  className="btn-secondary"
-                  disabled={submitting}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn-primary"
-                  disabled={orderForm.items.length === 0 || !orderForm.customer_id || submitting}
-                >
-                  {submitting ? 'SETTLING...' : 'Commit Transaction'}
-                </button>
-              </div>
-            </form>
+            )}
           </div>
-        </div>
-      )}
+
+          {/* Live subtotal */}
+          <div className="border-t border-[#2a2d3a] pt-4 flex justify-between items-center select-none">
+            <span className="font-mono text-xs uppercase tracking-wider font-semibold text-[#9ca3af]">Total Transaction:</span>
+            <span className="font-display font-bold text-2xl text-white">${orderTotalLive.toFixed(2)}</span>
+          </div>
+
+          <div className="h-[1px] bg-[#2a2d3a] mt-2"></div>
+
+          <div className="flex gap-4 justify-end">
+            <button 
+              type="button" 
+              onClick={() => setShowOrderModal(false)} 
+              className="btn-secondary"
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="btn-primary"
+              disabled={orderForm.items.length === 0 || !orderForm.customer_id || submitting}
+            >
+              {submitting ? 'SETTLING...' : 'Commit Transaction'}
+            </button>
+          </div>
+        </form>
+      </Modal>
  
       {/* ================= MODAL: ORDER DETAILS (Refined Overlay) ================= */}
-      {selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-[#12131a] border border-[#2a2d3a] w-full max-w-2xl p-8 relative rounded-lg shadow-2xl" style={{ transition: 'all 150ms ease' }}>
-            
-            {/* Close Button */}
-            <button 
-              onClick={() => setSelectedOrder(null)}
-              className="absolute top-6 right-6 p-2 border border-[#2a2d3a] text-[#9ca3af] hover:border-white hover:text-white rounded transition-colors"
-            >
-              <X size={16} />
-            </button>
- 
-            {/* Header info */}
-            <div className="mb-6">
-              <span className="font-mono text-xs uppercase tracking-widest text-[var(--accent)]">[Operational Audit]</span>
-              <h3 className="font-display font-bold text-xl uppercase tracking-wider text-white mt-1">
-                Transaction #TRX-{String(selectedOrder.id).padStart(4, '0')}
-              </h3>
-              <p className="font-mono text-[9px] text-[#9ca3af] mt-1">
-                INVENTORY BLOCK WRITE TIME: {new Date(selectedOrder.created_at).toLocaleString()}
-              </p>
-            </div>
- 
-            <div className="h-[1px] bg-[#2a2d3a] my-4"></div>
- 
+      <Modal
+        isOpen={!!selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        tag="[Operational Audit]"
+        title={`Transaction #TRX-${String(selectedOrder?.id).padStart(4, '0')}`}
+        subTitle={`INVENTORY BLOCK WRITE TIME: ${selectedOrder ? new Date(selectedOrder.created_at).toLocaleString() : ''}`}
+        size="lg"
+      >
+        {selectedOrder && (
+          <>
             {/* Customer Details */}
             <div className="mb-6 grid grid-cols-2 gap-4">
               <div>
@@ -2050,9 +1883,9 @@ export default function App() {
                 <span className="font-mono text-xs block text-white">{selectedOrder.customer?.phone_number || '—'}</span>
               </div>
             </div>
- 
+
             <div className="h-[1px] bg-[#2a2d3a] my-4"></div>
- 
+
             {/* Ordered Items Table */}
             <div className="mb-6 max-h-48 overflow-y-auto border border-[#2a2d3a] rounded">
               <table className="w-full text-left border-collapse text-[10px]">
@@ -2078,18 +1911,15 @@ export default function App() {
                 </tbody>
               </table>
             </div>
- 
+
             {/* Total Aggregate */}
             <div className="flex justify-between items-center border-t border-[#2a2d3a] pt-4 select-none">
               <span className="font-mono text-xs uppercase tracking-wider font-semibold text-[#9ca3af]">AGGREGATE VALUE:</span>
               <span className="font-display font-bold text-2xl text-white">${selectedOrder.total_amount.toFixed(2)}</span>
             </div>
- 
-
- 
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
  
       {/* ================= MODAL: GENERIC CONFIRMATION (Refined HUD Overlay) ================= */}
       {deleteConfirm.show && (
