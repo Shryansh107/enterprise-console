@@ -57,6 +57,7 @@ export default function App() {
   // Column Staged and Applied filters state
   const [stagedFilters, setStagedFilters] = useState({
     sku: '', name: '', min_price: '', max_price: '', min_stock: '', max_stock: '',
+    stock_status: '',
     customer_name: '', customer_email: '', phone: '', email: '',
     txn_id: '', min_amount: '', max_amount: ''
   });
@@ -871,8 +872,8 @@ export default function App() {
                                   column: activeFilterDropdown.column === 'name' ? '' : 'name'
                                 });
                               }}
-                              className={`hover:text-white transition-colors p-1 ${appliedFilters.products.name ? 'text-[var(--accent)] font-bold' : 'text-[#555770]'}`}
-                              title="Filter by Name"
+                              className={`hover:text-white transition-colors p-1 ${ (appliedFilters.products.name || appliedFilters.products.max_stock !== undefined || appliedFilters.products.min_stock !== undefined) ? 'text-[var(--accent)] font-bold' : 'text-[#555770]'}`}
+                              title="Filter by Name & Status"
                             >
                               <Filter size={12} />
                             </button>
@@ -886,7 +887,7 @@ export default function App() {
                               >
                                 <X size={12} />
                               </button>
-                              <div className="mb-3">
+                              <div className="mb-4">
                                 <label className="form-label mb-1">Filter by Product Name</label>
                                 <input 
                                   type="text" 
@@ -895,19 +896,64 @@ export default function App() {
                                   value={stagedFilters.name || ''}
                                   onChange={(e) => setStagedFilters({ ...stagedFilters, name: e.target.value })}
                                   onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleApplyFilter('products', 'name', { name: stagedFilters.name });
+                                    if (e.key === 'Enter') {
+                                      const patch = { name: stagedFilters.name };
+                                      if (stagedFilters.stock_status === 'low_stock') {
+                                        patch.max_stock = 5;
+                                        patch.min_stock = null;
+                                      } else if (stagedFilters.stock_status === 'depleted') {
+                                        patch.max_stock = 0;
+                                        patch.min_stock = null;
+                                      } else {
+                                        patch.max_stock = null;
+                                        patch.min_stock = null;
+                                      }
+                                      handleApplyFilter('products', 'name', patch);
+                                    }
                                   }}
                                 />
                               </div>
+
+                              <div className="mb-3">
+                                <label className="form-label mb-1">Stock Status</label>
+                                <select 
+                                  className="input-field bg-[#12131a] text-white focus:outline-none py-1.5"
+                                  value={stagedFilters.stock_status || ''}
+                                  onChange={(e) => setStagedFilters({ ...stagedFilters, stock_status: e.target.value })}
+                                >
+                                  <option value="" className="bg-[#12131a]">ALL STOCK LEVELS</option>
+                                  <option value="low_stock" className="bg-[#12131a]">LOW STOCK {"(<= 5)"}</option>
+                                  <option value="depleted" className="bg-[#12131a]">DEPLETED (0)</option>
+                                </select>
+                              </div>
+
                               <div className="flex gap-2 justify-end mt-4">
                                 <button 
-                                  onClick={(e) => { e.stopPropagation(); handleClearFilter('products', 'name', ['name']); }}
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setStagedFilters({ ...stagedFilters, stock_status: '', name: '' });
+                                    handleClearFilter('products', 'name', ['name', 'min_stock', 'max_stock']); 
+                                  }}
                                   className="btn-ghost py-1 px-2.5 text-[10px]"
                                 >
                                   Clear
                                 </button>
                                 <button 
-                                  onClick={(e) => { e.stopPropagation(); handleApplyFilter('products', 'name', { name: stagedFilters.name }); }}
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    const patch = { name: stagedFilters.name };
+                                    if (stagedFilters.stock_status === 'low_stock') {
+                                      patch.max_stock = 5;
+                                      patch.min_stock = null;
+                                    } else if (stagedFilters.stock_status === 'depleted') {
+                                      patch.max_stock = 0;
+                                      patch.min_stock = null;
+                                    } else {
+                                      patch.max_stock = null;
+                                      patch.min_stock = null;
+                                    }
+                                    handleApplyFilter('products', 'name', patch); 
+                                  }}
                                   className="btn-primary py-1 px-3 text-[10px]"
                                 >
                                   Apply
@@ -988,73 +1034,9 @@ export default function App() {
                           )}
                         </th>
  
-                        {/* QUANTITY Column Header with Filter Popover */}
-                        <th className="py-4 px-6 font-semibold text-right relative select-none">
-                          <div className="flex items-center gap-2 justify-end">
-                            <span>QUANTITY</span>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveFilterDropdown({
-                                  table: 'products',
-                                  column: activeFilterDropdown.column === 'stock' ? '' : 'stock'
-                                });
-                              }}
-                              className={`hover:text-white transition-colors p-1 ${ (appliedFilters.products.min_stock || appliedFilters.products.max_stock) ? 'text-[var(--accent)] font-bold' : 'text-[#555770]'}`}
-                              title="Filter by Quantity"
-                            >
-                              <Filter size={12} />
-                            </button>
-                          </div>
-                          
-                          {activeFilterDropdown.table === 'products' && activeFilterDropdown.column === 'stock' && (
-                            <div className="absolute top-12 right-6 z-50 w-72 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-md shadow-2xl normal-case font-normal text-xs text-[#f3f4f6] text-left">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); setActiveFilterDropdown({ table: '', column: '' }); }}
-                                className="absolute top-3 right-3 text-[#9ca3af] hover:text-white"
-                              >
-                                <X size={12} />
-                              </button>
-                              
-                              <div className="grid grid-cols-2 gap-2 mb-3">
-                                <div>
-                                  <label className="form-label mb-1">Min Stock</label>
-                                  <input 
-                                    type="number" 
-                                    placeholder="0"
-                                    className="input-field font-mono text-xs"
-                                    value={stagedFilters.min_stock || ''}
-                                    onChange={(e) => setStagedFilters({ ...stagedFilters, min_stock: e.target.value })}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="form-label mb-1">Max Stock</label>
-                                  <input 
-                                    type="number" 
-                                    placeholder="250"
-                                    className="input-field font-mono text-xs"
-                                    value={stagedFilters.max_stock || ''}
-                                    onChange={(e) => setStagedFilters({ ...stagedFilters, max_stock: e.target.value })}
-                                  />
-                                </div>
-                              </div>
-                              
-                              <div className="flex gap-2 justify-end mt-4">
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleClearFilter('products', 'stock', ['min_stock', 'max_stock']); }}
-                                  className="btn-ghost py-1 px-2.5 text-[10px]"
-                                >
-                                  Clear
-                                </button>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleApplyFilter('products', 'stock', { min_stock: stagedFilters.min_stock, max_stock: stagedFilters.max_stock }); }}
-                                  className="btn-primary py-1 px-3 text-[10px]"
-                                >
-                                  Apply
-                                </button>
-                              </div>
-                            </div>
-                          )}
+                        {/* QUANTITY Column Header */}
+                        <th className="py-4 px-6 font-semibold text-right select-none">
+                          QUANTITY
                         </th>
                         <th className="py-4 px-6 font-semibold text-center select-none">COMMAND</th>
                       </tr>
@@ -1075,25 +1057,33 @@ export default function App() {
                             <tr key={p.id} className="hover:bg-[#171924]/30 transition-colors duration-150">
                               <td className="py-4 px-6 font-bold font-mono text-[var(--accent)]">{p.sku}</td>
                               <td className="py-4 px-6">
-                                <span className="font-semibold block text-white">{p.name}</span>
-                                <span className="text-[8px] text-[#9ca3af] block font-mono">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-white">{p.name}</span>
+                                  {isLowStock && (
+                                    <span 
+                                      className="px-1 py-0.5 border border-[#f59e0b]/30 bg-[#f59e0b]/10 text-[#f59e0b] rounded text-[7.5px] font-mono uppercase tracking-wider font-semibold leading-none align-middle"
+                                      style={{ margin: 0, padding: '1px 3px' }}
+                                    >
+                                      Low Stock
+                                    </span>
+                                  )}
+                                  {isOutOfStock && (
+                                    <span 
+                                      className="px-1 py-0.5 border border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444] rounded text-[7.5px] font-mono uppercase tracking-wider font-semibold leading-none align-middle"
+                                      style={{ margin: 0, padding: '1px 3px' }}
+                                    >
+                                      Depleted
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[8px] text-[#9ca3af] block font-mono mt-1">
                                   LAST PATCHED: {new Date(p.updated_at).toLocaleString()}
                                 </span>
                               </td>
                               <td className="py-4 px-6 text-right font-semibold font-mono text-white">${p.price.toFixed(2)}</td>
                               <td className="py-4 px-6 text-right">
-                                <div className="flex flex-col items-end gap-1 font-mono">
-                                  <span className="font-semibold">{p.quantity_in_stock}</span>
-                                  {isLowStock && (
-                                    <span className="badge badge-warning text-[8px] py-0.5 tracking-wider uppercase font-semibold">
-                                      [Low Stock]
-                                    </span>
-                                  )}
-                                  {isOutOfStock && (
-                                    <span className="badge badge-error text-[8px] py-0.5 tracking-wider uppercase font-semibold">
-                                      [Depleted]
-                                    </span>
-                                  )}
+                                <div className="font-mono font-semibold text-white">
+                                  {p.quantity_in_stock}
                                 </div>
                               </td>
                               <td className="py-4 px-6">
