@@ -33,11 +33,11 @@ export default function Products({
       <tr key={p.id} className="hover:bg-[#171924]/30 transition-colors duration-150">
         <td className="py-4 px-6 font-bold font-mono text-[var(--accent)]">{p.sku}</td>
         <td className="py-4 px-6">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-white">{p.name}</span>
+          <div className="font-semibold text-white">
+            <span className="mr-2 text-white">{p.name}</span>
             {isLowStock && (
               <span 
-                className="px-1 py-0.5 border border-[#f59e0b]/30 bg-[#f59e0b]/10 text-[#f59e0b] rounded text-[7.5px] font-mono uppercase tracking-wider font-semibold leading-none align-middle"
+                className="inline-block px-1 py-0.5 border border-[#f59e0b]/30 bg-[#f59e0b]/10 text-[#f59e0b] rounded text-[7.5px] font-mono uppercase tracking-wider font-semibold leading-none align-middle"
                 style={{ margin: 0, padding: '1px 3px' }}
               >
                 Low Stock
@@ -45,7 +45,7 @@ export default function Products({
             )}
             {isOutOfStock && (
               <span 
-                className="px-1 py-0.5 border border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444] rounded text-[7.5px] font-mono uppercase tracking-wider font-semibold leading-none align-middle"
+                className="inline-block px-1 py-0.5 border border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444] rounded text-[7.5px] font-mono uppercase tracking-wider font-semibold leading-none align-middle"
                 style={{ margin: 0, padding: '1px 3px' }}
               >
                 Depleted
