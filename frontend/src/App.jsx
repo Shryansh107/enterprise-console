@@ -154,55 +154,150 @@ export default function App() {
     }
   };
 
+  // Helper to sync filter changes to URL search parameters
+  const updateURLWithFilters = (table, filterPatch) => {
+    const searchParams = new URLSearchParams();
+    
+    // Combine currently active table filters with the new patch
+    const mergedFilters = {
+      ...appliedFilters[table],
+      ...filterPatch
+    };
+
+    // Populate URL search params with non-empty values
+    Object.keys(mergedFilters).forEach(key => {
+      const value = mergedFilters[key];
+      if (value !== undefined && value !== null && value !== '') {
+        searchParams.set(key, value);
+      }
+    });
+
+    // Navigate to the current path with the new search string
+    navigate({
+      pathname: location.pathname,
+      search: searchParams.toString()
+    });
+  };
+
+  // Parse URL search parameters on route/query changes
   useEffect(() => {
-    loadData();
-  }, []);
+    const params = new URLSearchParams(location.search);
+    const filters = {};
+    params.forEach((value, key) => {
+      filters[key] = value;
+    });
+
+    if (currentPath === '/products') {
+      // Map stock_status parameter to API filters
+      const apiFilters = { ...filters };
+      if (filters.stock_status === 'low_stock') {
+        apiFilters.max_stock = 5;
+        apiFilters.min_stock = null;
+      } else if (filters.stock_status === 'depleted') {
+        apiFilters.max_stock = 0;
+        apiFilters.min_stock = null;
+      } else {
+        delete apiFilters.max_stock;
+        delete apiFilters.min_stock;
+      }
+      delete apiFilters.stock_status;
+
+      setStagedFilters(prev => ({
+        ...prev,
+        sku: filters.sku || '',
+        name: filters.name || '',
+        min_price: filters.min_price || '',
+        max_price: filters.max_price || '',
+        stock_status: filters.stock_status || '',
+      }));
+
+      setAppliedFilters(prev => ({
+        ...prev,
+        products: filters
+      }));
+
+      loadProducts(apiFilters);
+      
+      // Load baseline customers and orders if not populated yet
+      if (customers.length === 0) loadCustomers();
+      if (orders.length === 0) loadOrders();
+
+    } else if (currentPath === '/customers') {
+      setStagedFilters(prev => ({
+        ...prev,
+        name: filters.name || '',
+        email: filters.email || '',
+        phone: filters.phone || '',
+      }));
+
+      setAppliedFilters(prev => ({
+        ...prev,
+        customers: filters
+      }));
+
+      loadCustomers(filters);
+
+      // Load baseline products and orders if not populated yet
+      if (products.length === 0) loadProducts();
+      if (orders.length === 0) loadOrders();
+
+    } else if (currentPath === '/orders') {
+      setStagedFilters(prev => ({
+        ...prev,
+        txn_id: filters.txn_id || '',
+        customer_name: filters.customer_name || '',
+        min_amount: filters.min_amount || '',
+        max_amount: filters.max_amount || '',
+      }));
+
+      setAppliedFilters(prev => ({
+        ...prev,
+        orders: filters
+      }));
+
+      loadOrders(filters);
+
+      // Load baseline products and customers if not populated yet
+      if (products.length === 0) loadProducts();
+      if (customers.length === 0) loadCustomers();
+
+    } else if (currentPath === '/') {
+      // Dashboard - load fresh baseline numbers
+      loadData();
+    }
+  }, [location.pathname, location.search]);
 
   // Filter application helpers
   const handleApplyFilter = (table, column, filterPatch) => {
-    const updatedFilters = {
-      ...appliedFilters,
-      [table]: {
-        ...appliedFilters[table],
-        ...filterPatch
-      }
-    };
-    setAppliedFilters(updatedFilters);
     setActiveFilterDropdown({ table: '', column: '' });
-    
-    if (table === 'products') loadProducts(updatedFilters.products);
-    if (table === 'customers') loadCustomers(updatedFilters.customers);
-    if (table === 'orders') loadOrders(updatedFilters.orders);
+    updateURLWithFilters(table, filterPatch);
   };
 
   const handleClearFilter = (table, column, fieldsToClear) => {
+    setActiveFilterDropdown({ table: '', column: '' });
+    
+    // Clear staged input states
     const newStaged = { ...stagedFilters };
     fieldsToClear.forEach(field => {
       newStaged[field] = '';
     });
     setStagedFilters(newStaged);
 
-    const tableFilters = { ...appliedFilters[table] };
+    // Create filter patch with empty values to omit them from the URL query params
+    const filterPatch = {};
     fieldsToClear.forEach(field => {
-      delete tableFilters[field];
+      filterPatch[field] = '';
     });
     
-    const updatedFilters = {
-      ...appliedFilters,
-      [table]: tableFilters
-    };
-    setAppliedFilters(updatedFilters);
-    setActiveFilterDropdown({ table: '', column: '' });
-    
-    if (table === 'products') loadProducts(updatedFilters.products);
-    if (table === 'customers') loadCustomers(updatedFilters.customers);
-    if (table === 'orders') loadOrders(updatedFilters.orders);
+    updateURLWithFilters(table, filterPatch);
   };
 
   const handleClearAllFilters = (table) => {
+    setActiveFilterDropdown({ table: '', column: '' });
+    
     const newStaged = { ...stagedFilters };
     if (table === 'products') {
-      ['sku', 'name', 'min_price', 'max_price', 'min_stock', 'max_stock'].forEach(k => newStaged[k] = '');
+      ['sku', 'name', 'min_price', 'max_price', 'min_stock', 'max_stock', 'stock_status'].forEach(k => newStaged[k] = '');
     } else if (table === 'customers') {
       ['name', 'email', 'phone'].forEach(k => newStaged[k] = '');
     } else if (table === 'orders') {
@@ -210,16 +305,11 @@ export default function App() {
     }
     setStagedFilters(newStaged);
 
-    const updatedFilters = {
-      ...appliedFilters,
-      [table]: {}
-    };
-    setAppliedFilters(updatedFilters);
-    setActiveFilterDropdown({ table: '', column: '' });
-    
-    if (table === 'products') loadProducts({});
-    if (table === 'customers') loadCustomers({});
-    if (table === 'orders') loadOrders({});
+    // Navigate to current pathname with clear search query
+    navigate({
+      pathname: location.pathname,
+      search: ''
+    });
   };
 
   // Product CRUD
