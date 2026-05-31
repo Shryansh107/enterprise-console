@@ -166,6 +166,22 @@ a:hover {
   color: var(--muted-text);
 }
 
+/* Select fields overrides for high-fidelity technical density */
+select.input-field {
+  font-size: 0.75rem !important;
+  background-color: var(--surface) !important;
+  color: #fff !important;
+  cursor: pointer;
+}
+
+select.input-field option {
+  background-color: var(--surface) !important;
+  color: var(--text) !important;
+  font-size: 0.75rem !important;
+  font-family: var(--font-body);
+  padding: 0.5rem !important;
+}
+
 /* Standard B2B Elevated Cards */
 .enterprise-card {
   background-color: var(--surface);
