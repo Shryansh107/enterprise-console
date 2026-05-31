@@ -135,13 +135,14 @@ a:hover {
 /* Forms & Inputs */
 .input-field {
   width: 100%;
-  padding: 0.625rem 0.875rem;
+  padding: 0.625rem 0.875rem 0.625rem 0px; /* zero left padding */
   font-family: var(--font-body);
   font-size: 0.875rem;
   color: #fff;
-  border: 1px solid var(--border);
-  background-color: var(--surface);
-  border-radius: 6px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background-color: transparent;
+  border-radius: 0px !important;
   transition: all 150ms ease;
 }
 
@@ -151,8 +152,8 @@ a:hover {
 
 .input-field:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(192, 38, 211, 0.15);
+  border-bottom-color: var(--accent);
+  box-shadow: none;
 }
 
 .form-label {

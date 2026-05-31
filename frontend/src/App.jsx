@@ -443,7 +443,7 @@ export default function App() {
         {currentTab === 'dashboard' && (
           <div className="editorial-container">
             {/* Elegant HUD Sub-Header */}
-            <div className="mb-10 select-none relative">
+            <div className="mb-10 select-none relative pl-6">
               <span className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--accent)] block mb-1">// Operational Control Center</span>
               <h2 className="font-display font-bold text-3xl tracking-tight text-white select-none">
                 System Overview
@@ -612,7 +612,7 @@ export default function App() {
         {currentTab === 'products' && (
           <div className="editorial-container">
             {/* Header */}
-            <div className="mb-8">
+            <div className="mb-8 pl-6">
               <span className="font-mono text-xs uppercase tracking-widest text-[var(--accent)]">[Catalog Console]</span>
               <h2 className="font-display font-bold text-2xl uppercase tracking-wider text-white mt-1">Product Inventory</h2>
               <div className="h-[1px] bg-[#2a2d3a] mt-4"></div>
@@ -812,7 +812,7 @@ export default function App() {
         {currentTab === 'customers' && (
           <div className="editorial-container">
             {/* Header */}
-            <div className="mb-8">
+            <div className="mb-8 pl-6">
               <span className="font-mono text-xs uppercase tracking-widest text-[var(--accent)]">[Client Module]</span>
               <h2 className="font-display font-bold text-2xl uppercase tracking-wider text-white mt-1">Client Database</h2>
               <div className="h-[1px] bg-[#2a2d3a] mt-4"></div>
@@ -940,7 +940,7 @@ export default function App() {
         {currentTab === 'orders' && (
           <div className="editorial-container">
             {/* Header */}
-            <div className="mb-8">
+            <div className="mb-8 pl-6">
               <span className="font-mono text-xs uppercase tracking-widest text-[var(--accent)]">[Transaction Module]</span>
               <h2 className="font-display font-bold text-2xl uppercase tracking-wider text-white mt-1">Transaction Ledger</h2>
               <div className="h-[1px] bg-[#2a2d3a] mt-4"></div>
