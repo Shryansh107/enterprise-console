@@ -32,6 +32,8 @@ def get_orders(
     customer_email: Optional[str] = None,
     min_amount: Optional[float] = None,
     max_amount: Optional[float] = None,
+    skip: int = 0,
+    limit: int = 50,
     db: Session = Depends(get_db)
 ):
     query = db.query(Order).join(Customer, Order.customer_id == Customer.id, isouter=True)
@@ -58,7 +60,7 @@ def get_orders(
     return query.options(
         joinedload(Order.customer),
         joinedload(Order.items).joinedload(OrderItem.product)
-    ).order_by(Order.created_at.desc()).all()
+    ).order_by(Order.created_at.desc()).offset(skip).limit(limit).all()
 
 
 @router.get("/{order_id}", response_model=OrderResponse)

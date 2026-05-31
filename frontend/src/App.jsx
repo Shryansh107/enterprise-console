@@ -43,6 +43,15 @@ export default function App() {
   const [customers, setCustomers] = useState([]);
   const [orders, setOrders] = useState([]);
 
+  // Pagination skip/limit states
+  const PAGE_SIZE = 50;
+  const [hasMore, setHasMore] = useState({
+    products: true,
+    customers: true,
+    orders: true
+  });
+  const [loadingMore, setLoadingMore] = useState(false);
+
   // Loading & Error States
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -95,55 +104,121 @@ export default function App() {
     }, 4000);
   };
 
-  // Dedicated filters load helpers
-  const loadProducts = async (currentFilters = appliedFilters.products) => {
-    setLoading(true);
+  // Dedicated filters load helpers with page offsets
+  const loadProducts = async (currentFilters = {}, reset = false, currentCount = 0) => {
+    if (reset) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
     try {
-      const data = await api.products.list(currentFilters);
-      setProducts(data);
+      const skip = reset ? 0 : currentCount;
+      const apiFilters = {
+        ...currentFilters,
+        skip,
+        limit: PAGE_SIZE
+      };
+      const data = await api.products.list(apiFilters);
+      
+      if (reset) {
+        setProducts(data);
+      } else {
+        setProducts(prev => [...prev, ...data]);
+      }
+      
+      setHasMore(prev => ({
+        ...prev,
+        products: data.length === PAGE_SIZE
+      }));
     } catch (err) {
       console.error(err);
       showToast('Failed to fetch product catalog.', 'error');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
-  const loadCustomers = async (currentFilters = appliedFilters.customers) => {
-    setLoading(true);
+  const loadCustomers = async (currentFilters = {}, reset = false, currentCount = 0) => {
+    if (reset) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
     try {
-      const data = await api.customers.list(currentFilters);
-      setCustomers(data);
+      const skip = reset ? 0 : currentCount;
+      const apiFilters = {
+        ...currentFilters,
+        skip,
+        limit: PAGE_SIZE
+      };
+      const data = await api.customers.list(apiFilters);
+      
+      if (reset) {
+        setCustomers(data);
+      } else {
+        setCustomers(prev => [...prev, ...data]);
+      }
+      
+      setHasMore(prev => ({
+        ...prev,
+        customers: data.length === PAGE_SIZE
+      }));
     } catch (err) {
       console.error(err);
       showToast('Failed to fetch customer nodes.', 'error');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
-  const loadOrders = async (currentFilters = appliedFilters.orders) => {
-    setLoading(true);
+  const loadOrders = async (currentFilters = {}, reset = false, currentCount = 0) => {
+    if (reset) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
     try {
-      const data = await api.orders.list(currentFilters);
-      setOrders(data);
+      const skip = reset ? 0 : currentCount;
+      const apiFilters = {
+        ...currentFilters,
+        skip,
+        limit: PAGE_SIZE
+      };
+      const data = await api.orders.list(apiFilters);
+      
+      if (reset) {
+        setOrders(data);
+      } else {
+        setOrders(prev => [...prev, ...data]);
+      }
+      
+      setHasMore(prev => ({
+        ...prev,
+        orders: data.length === PAGE_SIZE
+      }));
     } catch (err) {
       console.error(err);
       showToast('Failed to fetch transaction ledger.', 'error');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
-  // Fetch initial core data
+  // Fetch initial core data for Dashboard stats (loads a larger list to display metrics accurately)
   const loadData = async () => {
     setLoading(true);
     try {
-      await Promise.all([
-        loadProducts(),
-        loadCustomers(),
-        loadOrders()
+      const [prodData, custData, ordData] = await Promise.all([
+        api.products.list({ skip: 0, limit: 2000 }),
+        api.customers.list({ skip: 0, limit: 2000 }),
+        api.orders.list({ skip: 0, limit: 2000 })
       ]);
+      setProducts(prodData);
+      setCustomers(custData);
+      setOrders(ordData);
       setError('');
     } catch (err) {
       console.error(err);
@@ -216,11 +291,11 @@ export default function App() {
         products: filters
       }));
 
-      loadProducts(apiFilters);
+      loadProducts(apiFilters, true, 0);
       
       // Load baseline customers and orders if not populated yet
-      if (customers.length === 0) loadCustomers();
-      if (orders.length === 0) loadOrders();
+      if (customers.length === 0) loadCustomers({}, true, 0);
+      if (orders.length === 0) loadOrders({}, true, 0);
 
     } else if (currentPath === '/customers') {
       setStagedFilters(prev => ({
@@ -235,11 +310,11 @@ export default function App() {
         customers: filters
       }));
 
-      loadCustomers(filters);
+      loadCustomers(filters, true, 0);
 
       // Load baseline products and orders if not populated yet
-      if (products.length === 0) loadProducts();
-      if (orders.length === 0) loadOrders();
+      if (products.length === 0) loadProducts({}, true, 0);
+      if (orders.length === 0) loadOrders({}, true, 0);
 
     } else if (currentPath === '/orders') {
       setStagedFilters(prev => ({
@@ -255,17 +330,59 @@ export default function App() {
         orders: filters
       }));
 
-      loadOrders(filters);
+      loadOrders(filters, true, 0);
 
       // Load baseline products and customers if not populated yet
-      if (products.length === 0) loadProducts();
-      if (customers.length === 0) loadCustomers();
+      if (products.length === 0) loadProducts({}, true, 0);
+      if (customers.length === 0) loadCustomers({}, true, 0);
 
     } else if (currentPath === '/') {
       // Dashboard - load fresh baseline numbers
       loadData();
     }
   }, [location.pathname, location.search]);
+
+  // Load more trigger callbacks mapped to paginated offsets
+  const handleLoadMoreProducts = (currentCount) => {
+    const params = new URLSearchParams(location.search);
+    const filters = {};
+    params.forEach((value, key) => {
+      filters[key] = value;
+    });
+
+    const apiFilters = { ...filters };
+    if (filters.stock_status === 'low_stock') {
+      apiFilters.max_stock = 5;
+      apiFilters.min_stock = null;
+    } else if (filters.stock_status === 'depleted') {
+      apiFilters.max_stock = 0;
+      apiFilters.min_stock = null;
+    } else {
+      delete apiFilters.max_stock;
+      delete apiFilters.min_stock;
+    }
+    delete apiFilters.stock_status;
+
+    loadProducts(apiFilters, false, currentCount);
+  };
+
+  const handleLoadMoreCustomers = (currentCount) => {
+    const params = new URLSearchParams(location.search);
+    const filters = {};
+    params.forEach((value, key) => {
+      filters[key] = value;
+    });
+    loadCustomers(filters, false, currentCount);
+  };
+
+  const handleLoadMoreOrders = (currentCount) => {
+    const params = new URLSearchParams(location.search);
+    const filters = {};
+    params.forEach((value, key) => {
+      filters[key] = value;
+    });
+    loadOrders(filters, false, currentCount);
+  };
 
   // Filter application helpers
   const handleApplyFilter = (table, column, filterPatch) => {
@@ -706,6 +823,9 @@ export default function App() {
                 setEditProduct={setEditProduct}
                 setDeleteConfirm={setDeleteConfirm}
                 LOW_STOCK_THRESHOLD={LOW_STOCK_THRESHOLD}
+                loadingMore={loadingMore}
+                hasMore={hasMore.products}
+                onLoadMore={handleLoadMoreProducts}
               />
             } 
           />
@@ -725,6 +845,9 @@ export default function App() {
                 handleClearAllFilters={handleClearAllFilters}
                 setShowCustomerModal={setShowCustomerModal}
                 setDeleteConfirm={setDeleteConfirm}
+                loadingMore={loadingMore}
+                hasMore={hasMore.customers}
+                onLoadMore={handleLoadMoreCustomers}
               />
             } 
           />
@@ -745,6 +868,9 @@ export default function App() {
                 setShowOrderModal={setShowOrderModal}
                 setSelectedOrder={setSelectedOrder}
                 setDeleteConfirm={setDeleteConfirm}
+                loadingMore={loadingMore}
+                hasMore={hasMore.orders}
+                onLoadMore={handleLoadMoreOrders}
               />
             } 
           />

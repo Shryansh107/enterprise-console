@@ -17,7 +17,10 @@ export default function Customers({
   handleClearFilter,
   handleClearAllFilters,
   setShowCustomerModal,
-  setDeleteConfirm
+  setDeleteConfirm,
+  loadingMore,
+  hasMore,
+  onLoadMore
 }) {
   // Named function for customer row rendering (definition > 5 lines)
   const renderCustomerRow = (c) => (
@@ -190,6 +193,9 @@ export default function Customers({
                   </tr>
                 }
                 renderRow={renderCustomerRow}
+                loadingMore={loadingMore}
+                hasMore={hasMore}
+                onLoadMore={() => onLoadMore(customers.length)}
               />
             </table>
           </div>

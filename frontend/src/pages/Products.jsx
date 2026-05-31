@@ -19,7 +19,10 @@ export default function Products({
   setShowProductModal,
   setEditProduct,
   setDeleteConfirm,
-  LOW_STOCK_THRESHOLD
+  LOW_STOCK_THRESHOLD,
+  loadingMore,
+  hasMore,
+  onLoadMore
 }) {
   // Named function for product row rendering (satisfying rule 9 - definition > 5 lines)
   const renderProductRow = (p) => {
@@ -297,6 +300,9 @@ export default function Products({
                   </tr>
                 }
                 renderRow={renderProductRow}
+                loadingMore={loadingMore}
+                hasMore={hasMore}
+                onLoadMore={() => onLoadMore(products.length)}
               />
             </table>
           </div>

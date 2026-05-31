@@ -33,6 +33,8 @@ def get_products(
     max_price: Optional[float] = None,
     min_stock: Optional[int] = None,
     max_stock: Optional[int] = None,
+    skip: int = 0,
+    limit: int = 50,
     db: Session = Depends(get_db)
 ):
     query = db.query(Product)
@@ -54,7 +56,7 @@ def get_products(
     if max_stock is not None:
         query = query.filter(Product.quantity_in_stock <= max_stock)
         
-    return query.order_by(Product.name).all()
+    return query.order_by(Product.name).offset(skip).limit(limit).all()
 
 
 @router.get("/{product_id}", response_model=ProductResponse)

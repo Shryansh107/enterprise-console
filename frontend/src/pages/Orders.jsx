@@ -18,7 +18,10 @@ export default function Orders({
   handleClearAllFilters,
   setShowOrderModal,
   setSelectedOrder,
-  setDeleteConfirm
+  setDeleteConfirm,
+  loadingMore,
+  hasMore,
+  onLoadMore
 }) {
   // Named function for order row rendering (definition > 5 lines)
   const renderOrderRow = (o) => (
@@ -223,6 +226,9 @@ export default function Orders({
                   </tr>
                 }
                 renderRow={renderOrderRow}
+                loadingMore={loadingMore}
+                hasMore={hasMore}
+                onLoadMore={() => onLoadMore(orders.length)}
               />
             </table>
           </div>

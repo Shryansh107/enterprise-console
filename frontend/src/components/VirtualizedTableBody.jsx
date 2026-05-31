@@ -1,34 +1,29 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 export default function VirtualizedTableBody({ 
   items, 
   colSpan, 
   renderRow, 
   emptyPlaceholder,
-  pageSize = 30
+  loadingMore = false,
+  hasMore = false,
+  onLoadMore
 }) {
-  const [visibleCount, setVisibleCount] = useState(pageSize);
   const observerTargetRef = useRef(null);
-
-  // Reset visible items count when items list changes (e.g. when filters are applied or tab changes)
-  useEffect(() => {
-    setVisibleCount(pageSize);
-  }, [items, pageSize]);
 
   useEffect(() => {
     const target = observerTargetRef.current;
-    if (!target) return;
+    if (!target || !hasMore || loadingMore) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          // Trigger adding more items when the user scrolls to the bottom
-          setVisibleCount((prev) => Math.min(items.length, prev + pageSize));
+          onLoadMore();
         }
       },
       {
         threshold: 0.1,
-        rootMargin: '100px' // Load next page slightly before reaching the bottom for smooth scrolling
+        rootMargin: '150px' // Load next chunk before reaching the absolute bottom for a smooth flow
       }
     );
 
@@ -36,9 +31,9 @@ export default function VirtualizedTableBody({
     return () => {
       observer.unobserve(target);
     };
-  }, [items.length, visibleCount, pageSize]);
+  }, [hasMore, loadingMore, onLoadMore, items.length]);
 
-  if (items.length === 0) {
+  if (items.length === 0 && !loadingMore) {
     return (
       <tbody className="divide-y divide-[#2a2d3a]">
         {emptyPlaceholder}
@@ -46,16 +41,26 @@ export default function VirtualizedTableBody({
     );
   }
 
-  const visibleItems = items.slice(0, visibleCount);
-
   return (
     <tbody className="divide-y divide-[#2a2d3a] text-[#f3f4f6]">
-      {visibleItems.map(renderRow)}
+      {items.map(renderRow)}
       
+      {/* Loader at the end of last item when new entries are being fetched */}
+      {loadingMore && (
+        <tr className="border-none hover:bg-transparent">
+          <td colSpan={colSpan} className="py-6 text-center border-none select-none">
+            <div className="flex items-center justify-center gap-3">
+              <div className="w-4 h-4 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-[#9ca3af]">// Loading more records from server</span>
+            </div>
+          </td>
+        </tr>
+      )}
+
       {/* Target element at the end of the list to trigger loading more items */}
-      {visibleCount < items.length && (
+      {hasMore && !loadingMore && (
         <tr ref={observerTargetRef} className="border-none hover:bg-transparent">
-          <td colSpan={colSpan} style={{ padding: 0, height: '4px' }} className="border-none opacity-0 select-none pointer-events-none" />
+          <td colSpan={colSpan} style={{ padding: 0, height: '8px' }} className="border-none opacity-0 select-none pointer-events-none" />
         </tr>
       )}
     </tbody>

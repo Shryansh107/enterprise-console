@@ -28,6 +28,8 @@ def get_customers(
     name: Optional[str] = None,
     email: Optional[str] = None,
     phone: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
     db: Session = Depends(get_db)
 ):
     query = db.query(Customer)
@@ -43,7 +45,7 @@ def get_customers(
     if phone:
         query = query.filter(Customer.phone_number.ilike(f"%{phone}%"))
         
-    return query.order_by(Customer.full_name).all()
+    return query.order_by(Customer.full_name).offset(skip).limit(limit).all()
 
 
 @router.get("/{customer_id}", response_model=CustomerResponse)
