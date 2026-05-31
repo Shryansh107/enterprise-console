@@ -22,7 +22,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    image: shryansh/ethara-backend:latest
     container_name: ethara-backend
+    command: ["python", "start.py"]
     ports:
       - "8000:8000"
     environment:
@@ -34,6 +36,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2)\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
     volumes:
       - ./backend:/app
 
@@ -41,16 +49,44 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    image: shryansh/ethara-frontend:latest
     container_name: ethara-frontend
     ports:
       - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:8000
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:5173', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
     volumes:
       - ./frontend:/app
       - /app/node_modules
+
+  links:
+    image: postgres:16-alpine
+    container_name: ethara-links
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    command:
+      - sh
+      - -c
+      - |
+        printf '\n%s\n' '========================================'
+        printf '%s\n' 'Ethara AI stack is ready.'
+        printf '%s\n' 'Frontend: http://localhost:5173'
+        printf '%s\n' 'Backend:  http://localhost:8000'
+        printf '%s\n' 'API Docs: http://localhost:8000/docs'
+        printf '%s\n\n' '========================================'
+    restart: "no"
 
 volumes:
   postgres_data:
