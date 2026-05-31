@@ -188,6 +188,29 @@ export default function App() {
     if (table === 'orders') loadOrders(updatedFilters.orders);
   };
 
+  const handleClearAllFilters = (table) => {
+    const newStaged = { ...stagedFilters };
+    if (table === 'products') {
+      ['sku', 'name', 'min_price', 'max_price', 'min_stock', 'max_stock'].forEach(k => newStaged[k] = '');
+    } else if (table === 'customers') {
+      ['name', 'email', 'phone'].forEach(k => newStaged[k] = '');
+    } else if (table === 'orders') {
+      ['txn_id', 'customer_name', 'min_amount', 'max_amount'].forEach(k => newStaged[k] = '');
+    }
+    setStagedFilters(newStaged);
+
+    const updatedFilters = {
+      ...appliedFilters,
+      [table]: {}
+    };
+    setAppliedFilters(updatedFilters);
+    setActiveFilterDropdown({ table: '', column: '' });
+    
+    if (table === 'products') loadProducts({});
+    if (table === 'customers') loadCustomers({});
+    if (table === 'orders') loadOrders({});
+  };
+
   // Product CRUD
   const handleProductCreate = async (e) => {
     e.preventDefault();
@@ -740,8 +763,16 @@ export default function App() {
  
             {/* CTA bar */}
             <div className="flex justify-between items-center mb-6 pl-6 pr-2">
-              <div className="text-xs font-mono text-[#9ca3af]">
-                Showing {products.length} product SKUs.
+              <div className="text-xs font-mono text-[#9ca3af] flex items-center gap-2">
+                <span>Showing {products.length} product SKUs.</span>
+                {Object.keys(appliedFilters.products).length > 0 && (
+                  <button 
+                    onClick={() => handleClearAllFilters('products')}
+                    className="px-2 py-0.5 border border-[#ef4444]/30 hover:border-[#ef4444] text-[#ef4444] bg-[#ef4444]/10 rounded text-[9px] font-mono uppercase tracking-wider transition-all cursor-pointer hover:bg-[#ef4444]/20"
+                  >
+                    Clear All Filters ×
+                  </button>
+                )}
               </div>
               <button 
                 onClick={() => setShowProductModal(true)} 
@@ -757,7 +788,15 @@ export default function App() {
               <div className="lg:col-span-12">
                 
                 {/* Table */}
-                <div className="border border-[#2a2d3a] bg-[#12131a] rounded-lg overflow-visible">
+                <div className="border border-[#2a2d3a] bg-[#12131a] rounded-lg overflow-visible relative">
+                  {loading && (
+                    <div className="absolute inset-0 bg-[#0b0b12]/50 backdrop-blur-sm z-[40] flex items-center justify-center rounded-lg animate-none">
+                      <div className="flex flex-col items-center gap-2 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-lg shadow-2xl">
+                        <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-[#9ca3af]">// Syncing Inventory</span>
+                      </div>
+                    </div>
+                  )}
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-[#171924] text-[#9ca3af] uppercase tracking-wider border-b border-[#2a2d3a]">
@@ -1102,8 +1141,16 @@ export default function App() {
  
             {/* CTA bar */}
             <div className="flex justify-between items-center mb-6 pl-6 pr-2">
-              <div className="text-xs font-mono text-[#9ca3af]">
-                Showing {customers.length} registered client profiles.
+              <div className="text-xs font-mono text-[#9ca3af] flex items-center gap-2">
+                <span>Showing {customers.length} registered client profiles.</span>
+                {Object.keys(appliedFilters.customers).length > 0 && (
+                  <button 
+                    onClick={() => handleClearAllFilters('customers')}
+                    className="px-2 py-0.5 border border-[#ef4444]/30 hover:border-[#ef4444] text-[#ef4444] bg-[#ef4444]/10 rounded text-[9px] font-mono uppercase tracking-wider transition-all cursor-pointer hover:bg-[#ef4444]/20"
+                  >
+                    Clear All Filters ×
+                  </button>
+                )}
               </div>
               <button 
                 onClick={() => setShowCustomerModal(true)} 
@@ -1119,7 +1166,15 @@ export default function App() {
               <div className="lg:col-span-12">
                 
                 {/* Table */}
-                <div className="border border-[#2a2d3a] bg-[#12131a] rounded-lg overflow-visible">
+                <div className="border border-[#2a2d3a] bg-[#12131a] rounded-lg overflow-visible relative">
+                  {loading && (
+                    <div className="absolute inset-0 bg-[#0b0b12]/50 backdrop-blur-sm z-[40] flex items-center justify-center rounded-lg animate-none">
+                      <div className="flex flex-col items-center gap-2 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-lg shadow-2xl">
+                        <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-[#9ca3af]">// Syncing Customer Nodes</span>
+                      </div>
+                    </div>
+                  )}
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-[#171924] text-[#9ca3af] uppercase tracking-wider border-b border-[#2a2d3a]">
@@ -1353,8 +1408,16 @@ export default function App() {
  
             {/* CTA bar */}
             <div className="flex justify-between items-center mb-6 pl-6 pr-2">
-              <div className="text-xs font-mono text-[#9ca3af]">
-                Showing {orders.length} transaction logs settled in database.
+              <div className="text-xs font-mono text-[#9ca3af] flex items-center gap-2">
+                <span>Showing {orders.length} transaction logs settled in database.</span>
+                {Object.keys(appliedFilters.orders).length > 0 && (
+                  <button 
+                    onClick={() => handleClearAllFilters('orders')}
+                    className="px-2 py-0.5 border border-[#ef4444]/30 hover:border-[#ef4444] text-[#ef4444] bg-[#ef4444]/10 rounded text-[9px] font-mono uppercase tracking-wider transition-all cursor-pointer hover:bg-[#ef4444]/20"
+                  >
+                    Clear All Filters ×
+                  </button>
+                )}
               </div>
               <button 
                 onClick={() => setShowOrderModal(true)} 
@@ -1370,7 +1433,15 @@ export default function App() {
               <div className="lg:col-span-12">
                 
                 {/* Table */}
-                <div className="border border-[#2a2d3a] bg-[#12131a] rounded-lg overflow-visible">
+                <div className="border border-[#2a2d3a] bg-[#12131a] rounded-lg overflow-visible relative">
+                  {loading && (
+                    <div className="absolute inset-0 bg-[#0b0b12]/50 backdrop-blur-sm z-[40] flex items-center justify-center rounded-lg animate-none">
+                      <div className="flex flex-col items-center gap-2 bg-[#12131a] border border-[#2a2d3a] p-4 rounded-lg shadow-2xl">
+                        <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-[#9ca3af]">// Syncing Transactions</span>
+                      </div>
+                    </div>
+                  )}
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-[#171924] text-[#9ca3af] uppercase tracking-wider border-b border-[#2a2d3a]">
