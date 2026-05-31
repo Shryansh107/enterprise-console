@@ -478,21 +478,21 @@ export default function App() {
               onClick={() => navigateTo('products')}
               className={`w-full text-left px-4 py-3 font-mono text-[10px] tracking-wider uppercase flex justify-between items-center transition-all duration-150 border-l-2 rounded-md ${currentTab === 'products' ? 'bg-[#171924] border-[var(--accent)] text-white font-semibold' : 'border-transparent text-[#9ca3af] hover:text-white hover:bg-[#171924]/50'}`}
             >
-              <span>Inventory SKUs ({products.length})</span>
+              <span>Inventory SKUs</span>
               <Cpu size={12} className={currentTab === 'products' ? 'text-[var(--accent)]' : 'opacity-40'} />
             </button>
             <button 
               onClick={() => navigateTo('customers')}
               className={`w-full text-left px-4 py-3 font-mono text-[10px] tracking-wider uppercase flex justify-between items-center transition-all duration-150 border-l-2 rounded-md ${currentTab === 'customers' ? 'bg-[#171924] border-[var(--accent)] text-white font-semibold' : 'border-transparent text-[#9ca3af] hover:text-white hover:bg-[#171924]/50'}`}
             >
-              <span>Customer Nodes ({customers.length})</span>
+              <span>Customer Nodes</span>
               <Users size={12} className={currentTab === 'customers' ? 'text-[var(--accent)]' : 'opacity-40'} />
             </button>
             <button 
               onClick={() => navigateTo('orders')}
               className={`w-full text-left px-4 py-3 font-mono text-[10px] tracking-wider uppercase flex justify-between items-center transition-all duration-150 border-l-2 rounded-md ${currentTab === 'orders' ? 'bg-[#171924] border-[var(--accent)] text-white font-semibold' : 'border-transparent text-[#9ca3af] hover:text-white hover:bg-[#171924]/50'}`}
             >
-              <span>Transaction Blocs ({orders.length})</span>
+              <span>Transaction Blocs</span>
               <Activity size={12} className={currentTab === 'orders' ? 'text-[var(--accent)]' : 'opacity-40'} />
             </button>
           </nav>
@@ -535,21 +535,21 @@ export default function App() {
               onClick={() => navigateTo('products')}
               className="w-full text-left px-4 py-4 font-mono text-xs tracking-wider uppercase border border-[#2a2d3a] text-[#9ca3af] hover:text-[var(--accent)] hover:border-[var(--accent)] flex justify-between items-center rounded-md"
             >
-              <span>Inventory Catalog ({products.length})</span>
+              <span>Inventory Catalog</span>
               <ChevronRight size={14} />
             </button>
             <button 
               onClick={() => navigateTo('customers')}
               className="w-full text-left px-4 py-4 font-mono text-xs tracking-wider uppercase border border-[#2a2d3a] text-[#9ca3af] hover:text-[var(--accent)] hover:border-[var(--accent)] flex justify-between items-center rounded-md"
             >
-              <span>Customer Nodes ({customers.length})</span>
+              <span>Customer Nodes</span>
               <ChevronRight size={14} />
             </button>
             <button 
               onClick={() => navigateTo('orders')}
               className="w-full text-left px-4 py-4 font-mono text-xs tracking-wider uppercase border border-[#2a2d3a] text-[#9ca3af] hover:text-[var(--accent)] hover:border-[var(--accent)] flex justify-between items-center rounded-md"
             >
-              <span>Transaction Blocs ({orders.length})</span>
+              <span>Transaction Blocs</span>
               <ChevronRight size={14} />
             </button>
           </nav>
@@ -2085,15 +2085,7 @@ export default function App() {
               <span className="font-display font-bold text-2xl text-white">${selectedOrder.total_amount.toFixed(2)}</span>
             </div>
  
-            {/* Close footer button */}
-            <div className="mt-8 flex justify-end">
-              <button 
-                onClick={() => setSelectedOrder(null)}
-                className="btn-primary px-8"
-              >
-                Close Audit Page
-              </button>
-            </div>
+
  
           </div>
         </div>
