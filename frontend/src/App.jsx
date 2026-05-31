@@ -719,7 +719,8 @@ export default function App() {
                   <input 
                     type="text" 
                     placeholder="Filter products by name or SKU..." 
-                    className="input-field uppercase font-mono text-xs tracking-wider pl-9"
+                    className="input-field uppercase font-mono text-xs tracking-wider"
+                    style={{ paddingLeft: '2.25rem' }}
                     value={productSearch}
                     onChange={(e) => setProductSearch(e.target.value)}
                   />
@@ -876,7 +877,8 @@ export default function App() {
                   <input 
                     type="text" 
                     placeholder="Filter clients by name or email..." 
-                    className="input-field uppercase font-mono text-xs tracking-wider pl-9"
+                    className="input-field uppercase font-mono text-xs tracking-wider"
+                    style={{ paddingLeft: '2.25rem' }}
                     value={customerSearch}
                     onChange={(e) => setCustomerSearch(e.target.value)}
                   />
