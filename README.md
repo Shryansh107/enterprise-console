@@ -13,7 +13,7 @@ A production-ready full-stack Inventory & Order Management System for managing p
 - **Centralized Exception Shielding & Scalability:** Built-in middleware catches duplicate SKUs or emails gracefully and returns explicit error codes, ensuring system reliability.
 
 ### 💻 React Frontend (Vite)
-- **List Virtualization & Infinite Scroll:** Implements `IntersectionObserver` virtualization ([VirtualizedTableBody.jsx](file:///c:/Users/lunrrrr/projects/etharaAI/frontend/src/components/VirtualizedTableBody.jsx)) for smooth list rendering of extensive datasets.
+- **List Virtualization & Infinite Scroll:** Implements `IntersectionObserver` virtualization for smooth list rendering of extensive datasets.
 - **Backend-Driven Query Filtering:** Connects frontend search and tabular column filters directly to query parameters for backend execution.
 - **Real-Time Operations Dashboard:** Reports metrics for total products, customer profiles, order history counts, and warning thresholds.
 - **Fluid Responsive User Interface:** Adapts layout structures between a sidebar view on desktop viewports and drawer panels on mobile resolutions.
